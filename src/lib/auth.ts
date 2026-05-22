@@ -45,7 +45,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       ? [
           Google({
             clientId: googleClientId,
-            clientSecret: googleClientSecret
+            clientSecret: googleClientSecret,
+            allowDangerousEmailAccountLinking: true
           })
         ]
       : []),
@@ -88,6 +89,32 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     })
   ],
   callbacks: {
+    async signIn({ user, account }) {
+      if (account?.provider !== "google") return true;
+
+      const email = user.email?.toLowerCase().trim();
+      if (!email) return "/sign-in?error=not-approved";
+
+      const approvedUser = await prisma.user.findUnique({
+        where: { email },
+        select: { id: true }
+      });
+      if (approvedUser) return true;
+
+      const pendingInvite = await prisma.invitation.findFirst({
+        where: {
+          email,
+          status: "PENDING",
+          expiresAt: { gt: new Date() }
+        },
+        orderBy: { createdAt: "desc" },
+        select: { token: true }
+      });
+
+      if (pendingInvite) return `/invite/${pendingInvite.token}`;
+
+      return "/sign-in?error=not-approved";
+    },
     authorized({ auth: session, request }) {
       const isAuthenticated = Boolean(session?.user);
       const isAuthRoute = request.nextUrl.pathname.startsWith("/sign-in");

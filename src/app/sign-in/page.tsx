@@ -109,7 +109,8 @@ const errorCopy: Record<string, string> = {
   credentials: "Email or password is incorrect, or this approved account has not set a password yet.",
   email: "We could not send the magic link. Check the email provider settings or try again in a moment.",
   google: "Google sign-in is not available right now. Try password or magic link sign-in instead.",
-  "google-not-configured": "Google sign-in has not been configured for this deployment yet."
+  "google-not-configured": "Google sign-in has not been configured for this deployment yet.",
+  "not-approved": "This email has not been approved for HarborSync yet."
 };
 
 const messageCopy: Record<string, string> = {
