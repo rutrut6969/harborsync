@@ -33,7 +33,40 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       : []),
     Resend({
       apiKey: resendApiKey,
-      from: emailFrom
+      from: emailFrom,
+      async sendVerificationRequest({ identifier, provider, url }) {
+        if (!provider.apiKey) {
+          console.error("Resend magic link failed: missing API key env");
+          throw new Error("Resend API key is not configured");
+        }
+
+        const host = new URL(url).host;
+        const response = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${provider.apiKey}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            from: provider.from,
+            to: identifier,
+            subject: `Sign in to HarborSync`,
+            html: magicLinkHtml(url, host),
+            text: `Sign in to HarborSync\n\n${url}\n\nIf you did not request this email, you can ignore it.`
+          })
+        });
+
+        if (!response.ok) {
+          const body = await response.text();
+          console.error("Resend magic link failed", {
+            status: response.status,
+            body,
+            from: provider.from,
+            to: identifier
+          });
+          throw new Error(`Resend magic link failed with status ${response.status}`);
+        }
+      }
     })
   ],
   callbacks: {
@@ -55,4 +88,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 function cleanEnv(value?: string) {
   const cleaned = value?.trim().replace(/^["']|["']$/g, "");
   return cleaned || undefined;
+}
+
+function magicLinkHtml(url: string, host: string) {
+  return `
+    <div style="font-family:Inter,Arial,sans-serif;line-height:1.5;color:#2B3138">
+      <h1 style="font-size:22px;margin-bottom:12px">Sign in to HarborSync</h1>
+      <p>Use the secure link below to continue to ${host}.</p>
+      <p style="margin:24px 0">
+        <a href="${url}" style="background:#3A6EA5;color:#fff;padding:12px 18px;border-radius:12px;text-decoration:none;font-weight:700">
+          Open HarborSync
+        </a>
+      </p>
+      <p style="font-size:13px;color:#667085">If you did not request this email, you can safely ignore it.</p>
+    </div>
+  `;
 }
