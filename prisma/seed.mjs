@@ -12,6 +12,17 @@ async function main() {
     }
   });
 
+  const adminUser = await prisma.user.upsert({
+    where: { email: "rutledgeisaac6969@gmail.com" },
+    update: {
+      name: "Isaac Rutledge"
+    },
+    create: {
+      email: "rutledgeisaac6969@gmail.com",
+      name: "Isaac Rutledge"
+    }
+  });
+
   const family = await prisma.familyGroup.upsert({
     where: { id: "demo-family-parker" },
     update: {},
@@ -33,6 +44,21 @@ async function main() {
     create: {
       familyGroupId: family.id,
       userId: user.id,
+      role: "FAMILY_ADMIN"
+    }
+  });
+
+  await prisma.familyMembership.upsert({
+    where: {
+      familyGroupId_userId: {
+        familyGroupId: family.id,
+        userId: adminUser.id
+      }
+    },
+    update: { role: "FAMILY_ADMIN" },
+    create: {
+      familyGroupId: family.id,
+      userId: adminUser.id,
       role: "FAMILY_ADMIN"
     }
   });
@@ -95,6 +121,14 @@ async function main() {
         role: "FAMILY_ADMIN"
       }
     }).catch(() => undefined);
+
+    await prisma.childPermission.create({
+      data: {
+        childId: child.id,
+        userId: adminUser.id,
+        role: "FAMILY_ADMIN"
+      }
+    }).catch(() => undefined);
   }
 
   const organization = await prisma.organization.upsert({
@@ -131,6 +165,21 @@ async function main() {
     create: {
       caseId: careCase.id,
       childId: avery.id
+    }
+  });
+
+  await prisma.caseParticipant.upsert({
+    where: {
+      caseId_userId: {
+        caseId: careCase.id,
+        userId: adminUser.id
+      }
+    },
+    update: { role: "FAMILY_ADMIN" },
+    create: {
+      caseId: careCase.id,
+      userId: adminUser.id,
+      role: "FAMILY_ADMIN"
     }
   });
 
