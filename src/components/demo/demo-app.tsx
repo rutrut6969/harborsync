@@ -2,20 +2,26 @@
 
 import {
   Activity,
+  AlertCircle,
   BellRing,
   Building2,
   CalendarDays,
   ChevronDown,
+  Download,
   FileText,
   FolderOpen,
   HeartPulse,
   Home,
   LockKeyhole,
   LogOut,
+  Mail,
+  MapPin,
   Pill,
   PlusCircle,
   Settings,
   ShieldCheck,
+  Trash2,
+  UserRound,
   UsersRound,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -25,16 +31,19 @@ import {
   demoCases,
   demoChildren,
   demoDocuments,
+  demoFamilyMembers,
   demoFollowUps,
+  demoNotifications,
   demoOrganizations,
-  demoRecords
+  demoRecords,
+  demoSettings
 } from "@/lib/demo-environment-data";
 import { Button } from "@/components/ui/button";
 import { Card, SectionHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
 
-type DemoTab = "home" | "records" | "add" | "documents" | "access";
+type DemoTab = "home" | "records" | "add" | "documents" | "access" | "profile" | "settings";
 type DemoRecord = (typeof demoRecords)[number];
 
 export function DemoApp() {
@@ -80,9 +89,12 @@ export function DemoApp() {
               setNotice("Demo logout simulated. You are still viewing the safe public sandbox.");
             }}
           />
-          <span className="rounded-full bg-[#eef8f6] px-3 py-1.5 text-xs font-semibold text-teal-soft">
-            Fake data only
-          </span>
+          <div className="flex items-center gap-2">
+            <DemoNotificationsPopover />
+            <span className="hidden rounded-full bg-[#eef8f6] px-3 py-1.5 text-xs font-semibold text-teal-soft sm:inline-flex">
+              Demo Mode - sample data only
+            </span>
+          </div>
         </div>
       </header>
 
@@ -131,6 +143,15 @@ export function DemoApp() {
             <DemoAddLog onAdd={addSandboxMedication} />
           ) : tab === "documents" ? (
             <DemoDocuments />
+          ) : tab === "profile" ? (
+            <DemoProfile />
+          ) : tab === "settings" ? (
+            <DemoSettings
+              onSimulate={(message) => {
+                setNotice(message);
+                setTab("settings");
+              }}
+            />
           ) : (
             <DemoAccess />
           )}
@@ -139,7 +160,7 @@ export function DemoApp() {
 
       <nav className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-2 pt-2 shadow-[0_-10px_30px_rgba(43,49,56,0.08)] backdrop-blur md:hidden">
         <div className="mx-auto grid max-w-md grid-cols-5 gap-1">
-          {tabs.map((item) => (
+          {demoMobileTabs.map((item) => (
             <button
               key={item.value}
               type="button"
@@ -210,12 +231,80 @@ function DemoMobileAccountMenu({ onNavigate, onLogout }: { onNavigate: (tab: Dem
           <p className="font-semibold">Jordan Parker</p>
           <p className="truncate text-sm text-slate-500">demo.family@harborsync.test</p>
         </div>
-        <DemoMenuButton icon={Settings} label="Account Settings" onClick={() => setOpen(false)} />
-        <DemoMenuButton icon={BellRing} label="Notification Preferences" onClick={() => setOpen(false)} />
+        <DemoMenuButton icon={Settings} label="Account Settings" onClick={() => { onNavigate("settings"); setOpen(false); }} />
+        <DemoMenuButton icon={BellRing} label="Notification Preferences" onClick={() => { onNavigate("settings"); setOpen(false); }} />
         <DemoMenuButton icon={Building2} label="Organization Access" onClick={() => { onNavigate("access"); setOpen(false); }} />
-        <DemoMenuButton icon={UsersRound} label="Family Management" onClick={() => { onNavigate("access"); setOpen(false); }} />
+        <DemoMenuButton icon={UsersRound} label="Family Management" onClick={() => { onNavigate("settings"); setOpen(false); }} />
         <div className="mt-1 border-t border-slate-100 pt-1">
           <DemoMenuButton icon={LogOut} label="Log Out" danger onClick={() => { onLogout(); setOpen(false); }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DemoNotificationsPopover() {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const unreadCount = demoNotifications.filter((item) => item.status === "Unread").length;
+
+  useEffect(() => {
+    function onPointerDown(event: PointerEvent) {
+      if (!menuRef.current?.contains(event.target as Node)) setOpen(false);
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, []);
+
+  return (
+    <div ref={menuRef} className="relative">
+      <button
+        type="button"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+        className="touch-target relative grid size-11 place-items-center rounded-full border border-white bg-white text-slate-500 shadow-sm transition hover:text-harbor focus:outline-none focus:ring-4 focus:ring-[#dfeaf5]"
+      >
+        <BellRing size={19} aria-hidden />
+        <span className="sr-only">Demo notifications</span>
+        <span className="absolute right-1.5 top-1.5 grid size-5 place-items-center rounded-full bg-harbor text-[0.65rem] font-bold text-white">
+          {unreadCount}
+        </span>
+      </button>
+      <div
+        className={cn(
+          "fixed left-3 right-3 top-[4.25rem] z-50 origin-top rounded-2xl border border-white bg-white p-3 calm-shadow transition sm:absolute sm:left-auto sm:right-0 sm:top-14 sm:w-[23rem] sm:origin-top-right",
+          open ? "scale-100 opacity-100" : "pointer-events-none scale-95 opacity-0"
+        )}
+      >
+        <div className="mb-3 flex items-center justify-between px-1">
+          <p className="font-semibold">Demo Notifications</p>
+          <span className="rounded-full bg-[#e8f1f8] px-2 py-1 text-xs font-semibold text-harbor">{unreadCount} new</span>
+        </div>
+        <div className="max-h-[22rem] space-y-2 overflow-y-auto">
+          {demoNotifications.map((item) => (
+            <div key={item.id} className="rounded-2xl border border-slate-100 p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-semibold">{item.title}</p>
+                  <p className="mt-1 text-sm leading-5 text-slate-500">{item.description}</p>
+                </div>
+                <span className={cn("shrink-0 rounded-full px-2 py-1 text-xs font-semibold", item.status === "Unread" ? "bg-[#e8f1f8] text-harbor" : "bg-[#f4f8fb] text-slate-500")}>
+                  {item.status}
+                </span>
+              </div>
+              <p className="mt-2 text-xs font-semibold text-teal-soft">{item.type} - {item.timestamp}</p>
+            </div>
+          ))}
         </div>
       </div>
     </div>
@@ -431,6 +520,187 @@ function DemoDocuments() {
   );
 }
 
+function DemoProfile() {
+  return (
+    <div className="space-y-5">
+      <Card className="overflow-hidden p-0">
+        <div className="bg-[linear-gradient(135deg,#e8f1f8,#eef8f6)] p-5">
+          <div className="flex items-center gap-4">
+            <div className="grid size-16 place-items-center rounded-3xl bg-harbor text-xl font-bold text-white shadow-sm">
+              JP
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-teal-soft">Demo Profile</p>
+              <h1 className="truncate text-2xl font-semibold text-slate-deep">Jordan Parker</h1>
+              <p className="truncate text-sm text-slate-600">{demoSettings.email}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <DemoPill>Family Admin</DemoPill>
+                <DemoPill>Parker Family</DemoPill>
+                <DemoPill>Demo active</DemoPill>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="space-y-5">
+          <Card>
+            <SectionHeader title="Recent Updates" />
+            <div className="space-y-3">
+              {demoRecords.slice(0, 5).map((record) => (
+                <div key={record.id} className="flex gap-3 rounded-2xl border border-slate-100 p-3">
+                  <div className="grid size-10 shrink-0 place-items-center rounded-2xl bg-[#eef8f6] text-teal-soft">
+                    <Activity size={19} aria-hidden />
+                  </div>
+                  <div>
+                    <p className="font-semibold">{record.title}</p>
+                    <p className="text-sm text-slate-500">{record.detail}</p>
+                    <p className="mt-2 text-xs font-semibold text-harbor">{record.patient} - {record.date}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <Card>
+            <SectionHeader title="Child Quick Access" />
+            <div className="grid gap-3 md:grid-cols-2">
+              {demoChildren.map((child) => (
+                <div key={child.id} className="rounded-2xl border border-slate-100 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold">{child.fullName}</p>
+                      <p className="text-sm text-slate-500">DOB {child.dob} - Age {child.age}</p>
+                    </div>
+                    <span className="rounded-full bg-[#e8f1f8] px-2.5 py-1 text-xs font-bold text-harbor">+2 new</span>
+                  </div>
+                  <div className="mt-4 grid gap-2 text-sm text-slate-600">
+                    <DemoInfo label="Allergies" value={child.allergies} />
+                    <DemoInfo label="Conditions" value={child.conditions} />
+                    <DemoInfo label="Medications" value={child.medications} />
+                    <DemoInfo label="Doctor" value={child.primaryDoctor} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+
+        <div className="space-y-5">
+          <Card>
+            <SectionHeader title="Family Relationships" />
+            <div className="space-y-3">
+              {demoFamilyMembers.map((member) => (
+                <div key={member.id} className="flex items-center gap-3 rounded-2xl border border-slate-100 p-3">
+                  <div className="grid size-10 place-items-center rounded-2xl bg-[#e8f1f8] text-sm font-bold text-harbor">{initials(member.name)}</div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold">{member.name}</p>
+                    <p className="text-xs text-slate-500">{member.relationship} - {member.role}</p>
+                  </div>
+                  {member.newCount ? <span className="rounded-full bg-[#e8f1f8] px-2 py-1 text-xs font-bold text-harbor">+{member.newCount}</span> : null}
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <Card>
+            <SectionHeader title="Important Information" />
+            <div className="space-y-3">
+              <DemoImportant icon={AlertCircle} label="Emergency contacts" value="2 child profiles have contacts listed" />
+              <DemoImportant icon={ShieldCheck} label="Permissions summary" value="Family admin, advocate, caregiver access" />
+              <DemoImportant icon={FileText} label="Documents needing review" value="1 lab result awaiting review" />
+            </div>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DemoSettings({ onSimulate }: { onSimulate: (message: string) => void }) {
+  return (
+    <div className="space-y-5">
+      <PageTitle eyebrow="Demo settings" title="Account Settings" />
+      <div className="grid gap-5 lg:grid-cols-2">
+        <Card>
+          <SectionHeader title="Account Information" />
+          <div className="space-y-3">
+            <DemoImportant icon={UserRound} label="Name" value={demoSettings.name} />
+            <DemoImportant icon={Mail} label="Email" value={demoSettings.email} />
+            <DemoImportant icon={ShieldCheck} label="Account status" value={demoSettings.accountStatus} />
+          </div>
+        </Card>
+
+        <Card>
+          <SectionHeader title="Contact Information" />
+          <div className="space-y-3">
+            <DemoImportant icon={Mail} label="Alternate email" value={demoSettings.alternateEmail} />
+            <DemoImportant icon={MapPin} label="Mailing address" value={demoSettings.mailingAddress} />
+            <DemoImportant icon={BellRing} label="Preferred contact" value={demoSettings.contactMethod} />
+          </div>
+        </Card>
+      </div>
+
+      <Card>
+        <SectionHeader title="Security" />
+        <div className="grid gap-3 sm:grid-cols-3">
+          {["Change password", "Session management", "Two-factor auth"].map((item) => (
+            <button key={item} type="button" onClick={() => onSimulate(`${item} is simulated in demo mode. No account data was changed.`)} className="touch-target rounded-2xl border border-slate-100 bg-[#f8fafc] px-3 py-3 text-left text-sm font-semibold text-slate-600 transition hover:bg-[#eef4fa]">
+              {item}
+            </button>
+          ))}
+        </div>
+      </Card>
+
+      <Card>
+        <SectionHeader title="Notification Preferences" />
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {demoSettings.notificationPreferences.map((item) => (
+            <label key={item} className="flex min-h-11 items-center gap-3 rounded-2xl bg-[#f8fafc] px-3 py-2 text-sm font-medium text-slate-600">
+              <input type="checkbox" defaultChecked className="size-4 accent-harbor" onChange={() => onSimulate("Notification preference toggled locally for this demo session only.")} />
+              {item}
+            </label>
+          ))}
+        </div>
+      </Card>
+
+      <Card>
+        <SectionHeader title="Family Management" />
+        <div className="space-y-3">
+          {demoFamilyMembers.map((member) => (
+            <div key={member.id} className="rounded-2xl border border-slate-100 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="font-semibold">{member.name}</p>
+                  <p className="text-sm text-slate-500">{member.relationship} - {member.access}</p>
+                </div>
+                <span className="rounded-full bg-[#eef8f6] px-2.5 py-1 text-xs font-semibold text-teal-soft">{member.status}</span>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {["Update permissions", "Resend invite", "Remove"].map((action) => (
+                  <button key={action} type="button" onClick={() => onSimulate(`${action} is simulated. No invitation or access changes were sent.`)} className="touch-target rounded-2xl bg-[#f4f8fb] px-3 text-xs font-semibold text-slate-600">
+                    {action}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <Card className="border-[#f3d4d4] bg-[#fffafa]">
+        <SectionHeader title="Danger Zone" />
+        <div className="grid gap-3 sm:grid-cols-3">
+          <DemoDanger icon={Download} label="Export my data" onClick={() => onSimulate("Demo export simulated. No file was generated from production data.")} />
+          <DemoDanger icon={Trash2} label="Deactivate account" onClick={() => onSimulate("Demo deactivation simulated. No account was changed.")} />
+          <DemoDanger icon={Trash2} label="Request data removal" onClick={() => onSimulate("Demo removal request simulated. No email or workflow was sent.")} />
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 function DemoAccess() {
   return (
     <div className="space-y-5">
@@ -523,6 +793,48 @@ function DemoMini({ label, value }: { label: string; value: string }) {
   );
 }
 
+function DemoInfo({ label, value }: { label: string; value: string }) {
+  return (
+    <p>
+      <span className="font-semibold text-slate-deep">{label}:</span> {value}
+    </p>
+  );
+}
+
+function DemoImportant({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
+  return (
+    <div className="flex gap-3 rounded-2xl bg-[#f8fafc] p-3">
+      <Icon className="shrink-0 text-harbor" size={19} aria-hidden />
+      <div>
+        <p className="font-semibold">{label}</p>
+        <p className="text-sm text-slate-500">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function DemoDanger({ icon: Icon, label, onClick }: { icon: LucideIcon; label: string; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className="touch-target flex items-center justify-center gap-2 rounded-2xl border border-[#f1cdcd] bg-white px-3 py-2 text-sm font-semibold text-error-muted transition hover:bg-[#fff5f5]">
+      <Icon size={17} aria-hidden />
+      {label}
+    </button>
+  );
+}
+
+function DemoPill({ children }: { children: React.ReactNode }) {
+  return <span className="rounded-full border border-white bg-white/80 px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm">{children}</span>;
+}
+
+function initials(value: string) {
+  return value
+    .split(/[ @.]/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+}
+
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl bg-white/10 p-3">
@@ -546,5 +858,9 @@ const tabs = [
   { value: "records" as const, label: "Records", icon: FolderOpen },
   { value: "add" as const, label: "Add Log", mobileLabel: "Add", icon: PlusCircle },
   { value: "documents" as const, label: "Documents", mobileLabel: "Docs", icon: FileText },
-  { value: "access" as const, label: "Access", icon: Building2 }
+  { value: "profile" as const, label: "Profile", icon: UserRound },
+  { value: "access" as const, label: "Access", icon: Building2 },
+  { value: "settings" as const, label: "Settings", icon: Settings }
 ];
+
+const demoMobileTabs = tabs.filter((item) => ["home", "records", "add", "documents", "profile"].includes(item.value));
