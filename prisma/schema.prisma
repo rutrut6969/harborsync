@@ -1,0 +1,456 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  FAMILY_ADMIN
+  FAMILY_MEMBER
+  CAREGIVER
+  CPS_CASEWORKER
+  ADVOCATE
+  READ_ONLY
+}
+
+enum OrganizationType {
+  CPS
+  NONPROFIT
+  ADVOCACY
+  HEALTHCARE
+  SCHOOL
+  OTHER
+}
+
+enum OrganizationStatus {
+  PENDING_APPROVAL
+  ACTIVE
+  SUSPENDED
+}
+
+enum CaseStatus {
+  OPEN
+  MONITORING
+  CLOSED
+  ARCHIVED
+}
+
+enum DoseStatus {
+  GIVEN
+  LATE
+  MISSED
+  REFUSED
+}
+
+enum LogType {
+  MEDICATION
+  DOCTOR_VISIT
+  BLOODWORK
+}
+
+enum DocumentType {
+  PDF
+  IMAGE
+  LAB_RESULT
+  DOCTOR_PAPERWORK
+  OTHER
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+enum SponsorshipStatus {
+  PENDING
+  ACTIVE
+  ENDED
+}
+
+enum AuditAction {
+  LOG_CREATED
+  DOCUMENT_UPLOADED
+  INVITATION_SENT
+  CASE_UPDATED
+  ACCESS_CHANGED
+  ORGANIZATION_APPROVED
+  FAMILY_CREATED
+  CHILD_CREATED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts              Account[]
+  sessions              Session[]
+  familyMemberships     FamilyMembership[]
+  organizationMemberships OrganizationMembership[]
+  caseParticipants      CaseParticipant[]
+  createdCases          Case[]                 @relation("CaseCreator")
+  medicationLogs        MedicationLog[]        @relation("MedicationAdmin")
+  doctorVisitLogs       DoctorVisitLog[]       @relation("DoctorVisitCreator")
+  bloodworkLogs         BloodworkLog[]         @relation("BloodworkCreator")
+  uploadedDocuments     Document[]             @relation("DocumentUploader")
+  auditLogs             AuditLog[]             @relation("AuditActor")
+  sentInvitations       Invitation[]           @relation("InvitationSender")
+  receivedInvitations   Invitation[]           @relation("InvitationRecipient")
+  childPermissions      ChildPermission[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Organization {
+  id             String             @id @default(cuid())
+  name           String
+  slug           String             @unique
+  type           OrganizationType
+  status         OrganizationStatus @default(PENDING_APPROVAL)
+  approvedDomain String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  memberships  OrganizationMembership[]
+  sponsoredCases Case[]
+  sponsorships FamilySponsorship[]
+  invitations  Invitation[]
+}
+
+model OrganizationMembership {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String
+  role           UserRole
+  isSeatActive   Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId, role])
+}
+
+model FamilyGroup {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  memberships  FamilyMembership[]
+  children     FamilyChild[]
+  sponsorships FamilySponsorship[]
+  invitations  Invitation[]
+}
+
+model FamilyMembership {
+  id            String   @id @default(cuid())
+  familyGroupId String
+  userId        String
+  role          UserRole
+  createdAt     DateTime @default(now())
+
+  familyGroup FamilyGroup @relation(fields: [familyGroupId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([familyGroupId, userId])
+  @@index([userId, role])
+}
+
+model ChildProfile {
+  id                 String   @id @default(cuid())
+  fullName           String
+  dateOfBirth        DateTime
+  allergies          String?
+  conditions         String?
+  currentMedications String?
+  emergencyContacts  Json?
+  primaryDoctor      String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  families       FamilyChild[]
+  cases          CaseChild[]
+  medicationLogs MedicationLog[]
+  doctorVisits   DoctorVisitLog[]
+  bloodworkLogs  BloodworkLog[]
+  documents      Document[]
+  permissions    ChildPermission[]
+}
+
+model FamilyChild {
+  id            String   @id @default(cuid())
+  familyGroupId String
+  childId       String
+  relationship  String?
+  createdAt     DateTime @default(now())
+
+  familyGroup FamilyGroup  @relation(fields: [familyGroupId], references: [id], onDelete: Cascade)
+  child       ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@unique([familyGroupId, childId])
+}
+
+model ChildPermission {
+  id        String   @id @default(cuid())
+  childId   String
+  userId    String
+  role      UserRole
+  caseId    String?
+  grantedAt DateTime @default(now())
+
+  child ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)
+  user  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  case  Case?        @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([userId, childId, role])
+  @@index([caseId])
+}
+
+model Case {
+  id                       String     @id @default(cuid())
+  title                    String
+  status                   CaseStatus @default(OPEN)
+  createdById              String
+  sponsoringOrganizationId String?
+  createdAt                DateTime   @default(now())
+  updatedAt                DateTime   @updatedAt
+
+  createdBy              User          @relation("CaseCreator", fields: [createdById], references: [id])
+  sponsoringOrganization Organization? @relation(fields: [sponsoringOrganizationId], references: [id])
+  children               CaseChild[]
+  participants           CaseParticipant[]
+  timeline               CaseTimelineEvent[]
+  documents              Document[]
+  permissions            ChildPermission[]
+  invitations            Invitation[]
+}
+
+model CaseChild {
+  id        String   @id @default(cuid())
+  caseId    String
+  childId   String
+  createdAt DateTime @default(now())
+
+  case  Case         @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  child ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@unique([caseId, childId])
+}
+
+model CaseParticipant {
+  id        String   @id @default(cuid())
+  caseId    String
+  userId    String
+  role      UserRole
+  createdAt DateTime @default(now())
+
+  case Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([caseId, userId])
+  @@index([userId, role])
+}
+
+model CaseTimelineEvent {
+  id        String   @id @default(cuid())
+  caseId    String
+  actorId   String?
+  label     String
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  case Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId, createdAt])
+}
+
+model MedicationLog {
+  id               String     @id @default(cuid())
+  childId          String
+  medicationName   String
+  dosage           Decimal
+  doseUnit         String
+  dateGiven        DateTime
+  timeGiven        String
+  administeredById String?
+  administeredByName String?
+  status           DoseStatus
+  notes            String?
+  sideEffects      String?
+  batchId          String?
+  entryMethod      String     @default("single")
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  child          ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)
+  administeredBy User?        @relation("MedicationAdmin", fields: [administeredById], references: [id])
+  documents      Document[]
+}
+
+model DoctorVisitLog {
+  id               String   @id @default(cuid())
+  childId          String
+  appointmentDate  DateTime
+  appointmentTime  String?
+  doctorName       String
+  specialty        String?
+  reasonForVisit   String
+  diagnosisOutcome String?
+  followUpRequired Boolean  @default(false)
+  followUpDate     DateTime?
+  createdById      String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  child     ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)
+  createdBy User?        @relation("DoctorVisitCreator", fields: [createdById], references: [id])
+  documents Document[]
+}
+
+model BloodworkLog {
+  id                   String   @id @default(cuid())
+  childId              String
+  bloodworkDate        DateTime
+  facility             String?
+  orderingDoctor       String?
+  labReason            String?
+  plateletCount        Decimal?
+  hemoglobin           Decimal?
+  whiteBloodCellCount  Decimal?
+  notes                String?
+  followUpRequired     Boolean  @default(false)
+  createdById          String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  child     ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)
+  createdBy User?        @relation("BloodworkCreator", fields: [createdById], references: [id])
+  documents Document[]
+}
+
+model Document {
+  id                String       @id @default(cuid())
+  title             String
+  type              DocumentType
+  fileUrl           String
+  fileKey           String
+  mimeType          String
+  sizeBytes         Int
+  uploadedById      String
+  childId           String?
+  caseId            String?
+  medicationLogId   String?
+  doctorVisitLogId  String?
+  bloodworkLogId    String?
+  createdAt         DateTime     @default(now())
+
+  uploadedBy     User            @relation("DocumentUploader", fields: [uploadedById], references: [id])
+  child          ChildProfile?   @relation(fields: [childId], references: [id], onDelete: Cascade)
+  case           Case?           @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  medicationLog  MedicationLog?  @relation(fields: [medicationLogId], references: [id], onDelete: Cascade)
+  doctorVisitLog DoctorVisitLog? @relation(fields: [doctorVisitLogId], references: [id], onDelete: Cascade)
+  bloodworkLog   BloodworkLog?   @relation(fields: [bloodworkLogId], references: [id], onDelete: Cascade)
+
+  @@index([childId, createdAt])
+  @@index([caseId, createdAt])
+}
+
+model AuditLog {
+  id        String      @id @default(cuid())
+  actorId   String?
+  action    AuditAction
+  message   String
+  childId   String?
+  caseId    String?
+  metadata  Json?
+  createdAt DateTime    @default(now())
+
+  actor User? @relation("AuditActor", fields: [actorId], references: [id])
+
+  @@index([childId, createdAt])
+  @@index([caseId, createdAt])
+  @@index([actorId, createdAt])
+}
+
+model Invitation {
+  id             String           @id @default(cuid())
+  email          String
+  role           UserRole
+  status         InvitationStatus @default(PENDING)
+  token          String           @unique
+  senderId       String
+  recipientId    String?
+  familyGroupId  String?
+  organizationId String?
+  caseId         String?
+  expiresAt      DateTime
+  createdAt      DateTime         @default(now())
+
+  sender       User          @relation("InvitationSender", fields: [senderId], references: [id])
+  recipient    User?         @relation("InvitationRecipient", fields: [recipientId], references: [id])
+  familyGroup  FamilyGroup?  @relation(fields: [familyGroupId], references: [id], onDelete: Cascade)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  case         Case?         @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([email, status])
+}
+
+model FamilySponsorship {
+  id             String            @id @default(cuid())
+  familyGroupId  String
+  organizationId String
+  status         SponsorshipStatus @default(PENDING)
+  startsAt       DateTime?
+  endsAt         DateTime?
+  createdAt      DateTime          @default(now())
+
+  familyGroup  FamilyGroup  @relation(fields: [familyGroupId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([familyGroupId, organizationId])
+}

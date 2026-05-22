@@ -1,0 +1,295 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { useFieldArray, useForm } from "react-hook-form";
+import type { FieldValues, Path, UseFormRegister, UseFormRegisterReturn } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { FileHeart, Pill, Plus, Stethoscope } from "lucide-react";
+import { children } from "@/lib/demo-data";
+import {
+  bulkMedicationSchema,
+  medicationLogSchema,
+  type BloodworkInput,
+  type DoctorVisitInput,
+  type MedicationLogInput
+} from "@/lib/validations/logs";
+import {
+  createBloodworkLog,
+  createBulkMedicationLog,
+  createDoctorVisitLog,
+  createMedicationLog
+} from "@/app/actions/logs";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+
+type LogType = "medication" | "bulk" | "doctor" | "bloodwork";
+
+export function AddLogForm({ initialType }: { initialType?: string }) {
+  const [type, setType] = useState<LogType>(normalizeType(initialType));
+  const [savedMessage, setSavedMessage] = useState("");
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <p className="text-sm font-medium text-teal-soft">Fast daily entry</p>
+        <h1 className="text-2xl font-semibold">Add Log</h1>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {logTypes.map((item) => (
+          <button
+            key={item.value}
+            type="button"
+            onClick={() => setType(item.value)}
+            className={cn(
+              "touch-target rounded-2xl border border-white bg-white p-3 text-left text-sm font-semibold text-slate-600 calm-shadow transition",
+              type === item.value && "bg-[#e8f1f8] text-harbor ring-2 ring-[#c9ddec]"
+            )}
+          >
+            <item.icon className="mb-2" size={19} aria-hidden />
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      {savedMessage ? (
+        <div className="rounded-2xl border border-[#cde7d6] bg-[#effaf3] p-3 text-sm font-medium text-[#417a54]">
+          {savedMessage}
+        </div>
+      ) : null}
+
+      {type === "bulk" ? (
+        <BulkMedicationForm onSaved={setSavedMessage} />
+      ) : type === "doctor" ? (
+        <DoctorVisitForm onSaved={setSavedMessage} />
+      ) : type === "bloodwork" ? (
+        <BloodworkForm onSaved={setSavedMessage} />
+      ) : (
+        <MedicationForm onSaved={setSavedMessage} />
+      )}
+    </div>
+  );
+}
+
+function MedicationForm({ onSaved }: { onSaved: (message: string) => void }) {
+  const { register, handleSubmit } = useForm<MedicationLogInput>({
+    defaultValues: defaultMedication(),
+    resolver: zodResolver(medicationLogSchema)
+  });
+
+  return (
+    <Card>
+      <form
+        className="space-y-4"
+        onSubmit={handleSubmit(async (values) => {
+          await createMedicationLog(values);
+          onSaved("Medication log saved.");
+        })}
+      >
+        <MedicationFields register={register} />
+        <Button className="w-full" type="submit">Save medication log</Button>
+      </form>
+    </Card>
+  );
+}
+
+function BulkMedicationForm({ onSaved }: { onSaved: (message: string) => void }) {
+  const batchId = useMemo(() => `batch-${Date.now().toString(36)}`, []);
+  const { register, control, handleSubmit } = useForm<{ entries: MedicationLogInput[] }>({
+    defaultValues: { entries: [defaultMedication()] },
+    resolver: zodResolver(bulkMedicationSchema)
+  });
+  const { fields, append, remove } = useFieldArray({ control, name: "entries" });
+
+  return (
+    <Card>
+      <form
+        className="space-y-4"
+        onSubmit={handleSubmit(async (values) => {
+          await createBulkMedicationLog(values);
+          onSaved(`${values.entries.length} medication entries saved with ${batchId}.`);
+        })}
+      >
+        <div className="rounded-2xl bg-[#f4f8fb] p-3 text-sm text-slate-500">
+          Batch ID: <span className="font-semibold text-slate-deep">{batchId}</span> · Entry method: bulk
+        </div>
+        {fields.map((field, index) => (
+          <div key={field.id} className="rounded-2xl border border-slate-100 p-3">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="font-semibold">Entry {index + 1}</p>
+              {fields.length > 1 ? (
+                <button type="button" className="text-sm font-semibold text-error-muted" onClick={() => remove(index)}>
+                  Remove
+                </button>
+              ) : null}
+            </div>
+            <MedicationFields prefix={`entries.${index}.`} register={register} />
+          </div>
+        ))}
+        <Button type="button" variant="secondary" className="w-full" onClick={() => append(defaultMedication())}>
+          <Plus size={18} aria-hidden />
+          Add Entry
+        </Button>
+        <Button className="w-full" type="submit">Save bulk log</Button>
+      </form>
+    </Card>
+  );
+}
+
+function DoctorVisitForm({ onSaved }: { onSaved: (message: string) => void }) {
+  const { register, handleSubmit } = useForm<DoctorVisitInput>();
+  return (
+    <Card>
+      <form className="space-y-4" onSubmit={handleSubmit(async (values) => {
+        await createDoctorVisitLog(values);
+        onSaved("Doctor visit saved.");
+      })}>
+        <PatientSelect register={register("childId")} />
+        <Field label="Appointment date" type="date" {...register("appointmentDate")} />
+        <Field label="Appointment time" type="time" {...register("appointmentTime")} />
+        <Field label="Doctor name" {...register("doctorName")} />
+        <Field label="Specialty" {...register("specialty")} />
+        <Textarea label="Reason for visit" {...register("reasonForVisit")} />
+        <Textarea label="Diagnosis / outcome" {...register("diagnosisOutcome")} />
+        <label className="flex items-center justify-between rounded-2xl bg-[#f4f8fb] p-3 text-sm font-medium">
+          Follow-up required
+          <input type="checkbox" className="size-5 accent-[#3A6EA5]" {...register("followUpRequired")} />
+        </label>
+        <Field label="Follow-up date" type="date" {...register("followUpDate")} />
+        <Button className="w-full" type="submit">Save doctor visit</Button>
+      </form>
+    </Card>
+  );
+}
+
+function BloodworkForm({ onSaved }: { onSaved: (message: string) => void }) {
+  const { register, handleSubmit } = useForm<BloodworkInput>();
+  return (
+    <Card>
+      <form className="space-y-4" onSubmit={handleSubmit(async (values) => {
+        await createBloodworkLog(values);
+        onSaved("Bloodwork log saved.");
+      })}>
+        <PatientSelect register={register("childId")} />
+        <Field label="Bloodwork date" type="date" {...register("bloodworkDate")} />
+        <Field label="Facility" {...register("facility")} />
+        <Field label="Ordering doctor" {...register("orderingDoctor")} />
+        <Textarea label="Lab reason" {...register("labReason")} />
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Field label="Platelets" inputMode="decimal" {...register("plateletCount")} />
+          <Field label="Hemoglobin" inputMode="decimal" {...register("hemoglobin")} />
+          <Field label="WBC" inputMode="decimal" {...register("whiteBloodCellCount")} />
+        </div>
+        <Textarea label="Notes" {...register("notes")} />
+        <label className="flex items-center justify-between rounded-2xl bg-[#f4f8fb] p-3 text-sm font-medium">
+          Follow-up required
+          <input type="checkbox" className="size-5 accent-[#3A6EA5]" {...register("followUpRequired")} />
+        </label>
+        <Button className="w-full" type="submit">Save bloodwork</Button>
+      </form>
+    </Card>
+  );
+}
+
+function MedicationFields<T extends FieldValues>({
+  register,
+  prefix = ""
+}: {
+  register: UseFormRegister<T>;
+  prefix?: string;
+}) {
+  const field = (name: string) => `${prefix}${name}` as Path<T>;
+
+  return (
+    <div className="space-y-3">
+      <PatientSelect register={register(field("childId"))} />
+      <Field label="Medication name" {...register(field("medicationName"))} />
+      <div className="grid grid-cols-[1fr_7rem] gap-3">
+        <Field label="Dosage" inputMode="decimal" {...register(field("dosage"))} />
+        <Field label="Unit" placeholder="mg" {...register(field("doseUnit"))} />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Date given" type="date" {...register(field("dateGiven"))} />
+        <Field label="Time" type="time" {...register(field("timeGiven"))} />
+      </div>
+      <Field label="Administered by" {...register(field("administeredByName"))} />
+      <label className="block">
+        <span className="mb-1.5 block text-sm font-medium text-slate-600">Dose status</span>
+        <select className={inputClass} {...register(field("status"))}>
+          <option value="GIVEN">Given</option>
+          <option value="LATE">Late</option>
+          <option value="MISSED">Missed</option>
+          <option value="REFUSED">Refused</option>
+        </select>
+      </label>
+      <Textarea label="Notes" {...register(field("notes"))} />
+      <Textarea label="Side effects" {...register(field("sideEffects"))} />
+    </div>
+  );
+}
+
+function PatientSelect({ register }: { register: UseFormRegisterReturn }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-sm font-medium text-slate-600">Patient</span>
+      <select className={inputClass} {...register}>
+        <option value="">Choose patient</option>
+        {children.map((child) => (
+          <option key={child.id} value={child.id}>{child.name}</option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function Field({ label, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-sm font-medium text-slate-600">{label}</span>
+      <input className={inputClass} {...props} />
+    </label>
+  );
+}
+
+function Textarea({ label, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { label: string }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-sm font-medium text-slate-600">{label}</span>
+      <textarea rows={3} className={cn(inputClass, "min-h-24 py-3")} {...props} />
+    </label>
+  );
+}
+
+function defaultMedication(): MedicationLogInput {
+  const now = new Date();
+  return {
+    childId: "",
+    medicationName: "",
+    dosage: 1,
+    doseUnit: "mg",
+    dateGiven: now.toISOString().slice(0, 10),
+    timeGiven: now.toTimeString().slice(0, 5),
+    administeredByName: "",
+    status: "GIVEN",
+    notes: "",
+    sideEffects: ""
+  };
+}
+
+function normalizeType(type?: string): LogType {
+  if (type === "doctor") return "doctor";
+  if (type === "bloodwork") return "bloodwork";
+  if (type === "bulk") return "bulk";
+  return "medication";
+}
+
+const logTypes = [
+  { value: "medication" as const, label: "Medication", icon: Pill },
+  { value: "bulk" as const, label: "Bulk Meds", icon: Plus },
+  { value: "doctor" as const, label: "Doctor Visit", icon: Stethoscope },
+  { value: "bloodwork" as const, label: "Bloodwork", icon: FileHeart }
+];
+
+const inputClass =
+  "touch-target w-full rounded-2xl border border-slate-200 bg-[#f8fafc] px-4 text-base outline-none transition focus:border-harbor focus:bg-white focus:ring-4 focus:ring-[#dfeaf5]";
