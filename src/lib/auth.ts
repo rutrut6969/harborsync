@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
+  trustHost: true,
   session: {
     strategy: "database"
   },
@@ -15,6 +16,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Google,
     Resend({
+      apiKey: process.env.AUTH_RESEND_KEY ?? process.env.RESEND_API_KEY,
       from: process.env.EMAIL_FROM ?? "HarborSync <notifications@harborsync.app>"
     })
   ],

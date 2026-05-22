@@ -29,6 +29,7 @@ For Resend magic links before a custom domain is verified, use:
 ```env
 EMAIL_FROM="HarborSync <onboarding@resend.dev>"
 AUTH_RESEND_KEY="your-resend-api-key"
+AUTH_TRUST_HOST="true"
 ```
 
 ## Product Boundaries
