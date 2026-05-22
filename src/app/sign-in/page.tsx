@@ -113,5 +113,6 @@ const errorCopy: Record<string, string> = {
 };
 
 const messageCopy: Record<string, string> = {
-  "password-reset": "Password updated. You can sign in with your new password."
+  "password-reset": "Password updated. You can sign in with your new password.",
+  "invite-accepted": "Invite accepted. Sign in with the password you just created."
 };

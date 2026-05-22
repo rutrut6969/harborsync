@@ -41,6 +41,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, SectionHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { exportRecordsToPdf } from "@/lib/export";
 import { cn } from "@/lib/utils";
 
 type DemoTab = "home" | "records" | "add" | "documents" | "access" | "profile" | "settings";
@@ -417,20 +418,37 @@ function DemoRecords({ records }: { records: DemoRecord[] }) {
     <div className="space-y-5">
       <PageTitle eyebrow="Sandbox records" title="Records Center" />
       <Card>
-        <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
-          {["All", "Medication", "Doctor Visit", "Bloodwork", "Document"].map((item) => (
-            <button
-              key={item}
-              type="button"
-              onClick={() => setFilter(item)}
-              className={cn(
-                "touch-target shrink-0 rounded-2xl px-4 text-sm font-semibold transition",
-                filter === item ? "bg-harbor text-white" : "bg-[#f4f8fb] text-slate-600"
-              )}
-            >
-              {item}
-            </button>
-          ))}
+        <div className="mb-4 flex flex-col gap-3">
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {["All", "Medication", "Doctor Visit", "Bloodwork", "Document"].map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => setFilter(item)}
+                className={cn(
+                  "touch-target shrink-0 rounded-2xl px-4 text-sm font-semibold transition",
+                  filter === item ? "bg-harbor text-white" : "bg-[#f4f8fb] text-slate-600"
+                )}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            className="w-full sm:w-auto"
+            onClick={() =>
+              exportRecordsToPdf({
+                rows: filteredRecords,
+                context: `Demo ${filter} records`,
+                demo: true
+              })
+            }
+          >
+            <Download size={17} aria-hidden />
+            Export demo PDF
+          </Button>
         </div>
         <div className="space-y-3">
           {filteredRecords.length ? (

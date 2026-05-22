@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/lib/audit";
+import { canWriteChildRecord } from "@/lib/permissions";
 import {
   bloodworkSchema,
   bulkMedicationSchema,
@@ -16,6 +17,7 @@ export async function createMedicationLog(input: unknown) {
   if (!session?.user?.id) throw new Error("Unauthorized");
 
   const data = medicationLogSchema.parse(input);
+  if (!(await canWriteChildRecord(session.user.id, data.childId))) throw new Error("You do not have permission to add logs for this child.");
 
   const log = await prisma.medicationLog.create({
     data: {
@@ -49,6 +51,9 @@ export async function createBulkMedicationLog(input: unknown) {
   if (!session?.user?.id) throw new Error("Unauthorized");
 
   const data = bulkMedicationSchema.parse(input);
+  for (const entry of data.entries) {
+    if (!(await canWriteChildRecord(session.user.id, entry.childId))) throw new Error("You do not have permission to add logs for this child.");
+  }
   const batchId = crypto.randomUUID();
 
   const logs = await prisma.medicationLog.createMany({
@@ -85,6 +90,7 @@ export async function createDoctorVisitLog(input: unknown) {
   if (!session?.user?.id) throw new Error("Unauthorized");
 
   const data = doctorVisitSchema.parse(input);
+  if (!(await canWriteChildRecord(session.user.id, data.childId))) throw new Error("You do not have permission to add logs for this child.");
 
   const log = await prisma.doctorVisitLog.create({
     data: {
@@ -117,6 +123,7 @@ export async function createBloodworkLog(input: unknown) {
   if (!session?.user?.id) throw new Error("Unauthorized");
 
   const data = bloodworkSchema.parse(input);
+  if (!(await canWriteChildRecord(session.user.id, data.childId))) throw new Error("You do not have permission to add logs for this child.");
 
   const log = await prisma.bloodworkLog.create({
     data: {

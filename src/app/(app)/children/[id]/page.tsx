@@ -1,10 +1,10 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, HeartPulse, Phone, UserRound } from "lucide-react";
+import { HeartPulse, Phone, UserRound } from "lucide-react";
 import { format } from "date-fns";
 import { auth } from "@/lib/auth";
 import { getChildForUser } from "@/lib/data";
 import { Card, SectionHeader } from "@/components/ui/card";
+import { BackButton } from "@/components/ui/back-button";
 
 export default async function ChildPage({
   params
@@ -19,10 +19,7 @@ export default async function ChildPage({
 
   return (
     <div className="space-y-5">
-      <Link href="/" className="inline-flex items-center gap-2 text-sm font-semibold text-harbor">
-        <ArrowLeft size={16} aria-hidden />
-        Back
-      </Link>
+      <BackButton />
       <Card>
         <div className="flex items-start gap-4">
           <div className="grid size-14 place-items-center rounded-2xl bg-[#e8f1f8] text-harbor">

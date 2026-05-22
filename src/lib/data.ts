@@ -20,6 +20,17 @@ export async function getAccessibleChildren(userId: string) {
               }
             }
           }
+        },
+        {
+          cases: {
+            some: {
+              case: {
+                participants: {
+                  some: { userId }
+                }
+              }
+            }
+          }
         }
       ]
     },
@@ -250,7 +261,8 @@ export async function getProfileData(userId: string) {
         familyGroup: {
           include: {
             memberships: { include: { user: true }, orderBy: { createdAt: "asc" } },
-            children: { include: { child: true } }
+            children: { include: { child: true } },
+            sponsorships: { include: { organization: true } }
           }
         }
       },
@@ -267,6 +279,7 @@ export async function getProfileData(userId: string) {
         case: {
           include: {
             sponsoringOrganization: true,
+            participants: { include: { user: true } },
             children: {
               include: { child: true }
             }
@@ -326,6 +339,16 @@ export async function getProfileData(userId: string) {
           { senderId: userId },
           { recipientId: userId }
         ]
+      },
+      include: {
+        familyGroup: true,
+        case: {
+          include: {
+            children: { include: { child: true } }
+          }
+        },
+        organization: true,
+        recipient: true
       },
       orderBy: { createdAt: "desc" },
       take: 5

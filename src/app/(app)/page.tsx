@@ -3,6 +3,7 @@ import { CalendarDays, ClipboardPlus, FileHeart, Pill, PlusCircle, ShieldCheck }
 import { auth } from "@/lib/auth";
 import { getDashboardData } from "@/lib/data";
 import { Card, SectionHeader } from "@/components/ui/card";
+import { ExpandableCard } from "@/components/ui/expandable-card";
 
 export default async function HomePage() {
   const session = await auth();
@@ -35,17 +36,16 @@ export default async function HomePage() {
             <SectionHeader title="Upcoming Follow-Ups" />
             <div className="space-y-3">
               {upcoming.map((item) => (
-                <div key={item.title} className="flex gap-3 rounded-2xl bg-[#f4f8fb] p-3">
-                  <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-[#e1eff6] text-harbor">
-                    <CalendarDays size={20} aria-hidden />
+                <ExpandableCard key={item.title} title={item.title} subtitle={`${item.date} - ${item.detail}`} badge="Follow-up">
+                  <div className="flex gap-3">
+                    <CalendarDays className="mt-1 shrink-0 text-harbor" size={20} aria-hidden />
+                    <div>
+                      <p><span className="font-semibold text-slate-deep">Due:</span> {item.date}</p>
+                      <p><span className="font-semibold text-slate-deep">Details:</span> {item.detail}</p>
+                      <p><span className="font-semibold text-slate-deep">Notes:</span> Related doctor, facility, and record notes appear here as they are logged.</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium">{item.title}</p>
-                    <p className="text-sm text-slate-500">
-                      {item.date} · {item.detail}
-                    </p>
-                  </div>
-                </div>
+                </ExpandableCard>
               ))}
             </div>
           </Card>
@@ -54,16 +54,12 @@ export default async function HomePage() {
             <SectionHeader title="Recent Logs" action={<Link href="/records" className="text-sm font-semibold text-harbor">View all</Link>} />
             <div className="space-y-3">
               {recentLogs.map((log) => (
-                <div key={`${log.type}-${log.title}`} className="rounded-2xl border border-slate-100 p-3">
-                  <div className="mb-1 flex items-center justify-between gap-2">
-                    <span className="rounded-full bg-[#e8f1f8] px-2.5 py-1 text-xs font-semibold text-harbor">
-                      {log.type}
-                    </span>
-                    <span className="text-xs text-slate-400">{log.child}</span>
-                  </div>
-                  <p className="font-medium">{log.title}</p>
-                  <p className="text-sm text-slate-500">{log.meta}</p>
-                </div>
+                <ExpandableCard key={`${log.type}-${log.title}`} title={log.title} subtitle={`${log.child} - ${log.meta}`} badge={log.type}>
+                  <p><span className="font-semibold text-slate-deep">Patient:</span> {log.child}</p>
+                  <p><span className="font-semibold text-slate-deep">Type:</span> {log.type}</p>
+                  <p><span className="font-semibold text-slate-deep">Details:</span> {log.meta}</p>
+                  <p><span className="font-semibold text-slate-deep">Documents:</span> Attached images and PDFs will appear here when uploaded.</p>
+                </ExpandableCard>
               ))}
             </div>
           </Card>
@@ -76,7 +72,7 @@ export default async function HomePage() {
               {children.map((child) => (
               <Link
                   key={child.id}
-                  href={`/children/${child.id}`}
+                  href={`/children/${child.id}?from=home`}
                   className="block rounded-2xl border border-slate-100 p-3 transition hover:border-[#c8d8e8] hover:bg-[#f7fafc]"
                 >
                   <p className="font-semibold">{child.fullName}</p>

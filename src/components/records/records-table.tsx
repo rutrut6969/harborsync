@@ -14,6 +14,7 @@ import { ArrowUpDown, Download, FolderSearch, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { exportRecordsToPdf } from "@/lib/export";
 
 type RecordRow = {
   id: string;
@@ -26,7 +27,7 @@ type RecordRow = {
 
 const tabs = ["Medication", "Doctor Visit", "Bloodwork", "Document", "Activity"] as const;
 
-export function RecordsTable({ records }: { records: RecordRow[] }) {
+export function RecordsTable({ records, demo = false }: { records: RecordRow[]; demo?: boolean }) {
   const [activeTab, setActiveTab] = useState<(typeof tabs)[number]>("Medication");
   const [globalFilter, setGlobalFilter] = useState("");
   const [sorting, setSorting] = useState<SortingState>([{ id: "date", desc: true }]);
@@ -74,7 +75,17 @@ export function RecordsTable({ records }: { records: RecordRow[] }) {
               className="touch-target w-full rounded-2xl border border-slate-200 bg-[#f8fafc] pl-10 pr-4 text-base outline-none transition focus:border-harbor focus:bg-white focus:ring-4 focus:ring-[#dfeaf5]"
             />
           </label>
-          <Button type="button" variant="secondary">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() =>
+              exportRecordsToPdf({
+                rows: table.getRowModel().rows.map((row) => row.original),
+                context: `${activeTab} records${globalFilter ? ` matching "${globalFilter}"` : ""}`,
+                demo
+              })
+            }
+          >
             <Download size={17} aria-hidden />
             Export PDF
           </Button>
@@ -177,8 +188,8 @@ const columns: ColumnDef<RecordRow>[] = [
 
 function RecordCard({ record }: { record: RecordRow }) {
   return (
-    <article className="rounded-2xl border border-slate-100 bg-white p-3 shadow-sm transition active:scale-[0.99]">
-      <div className="mb-3 flex items-start justify-between gap-3">
+    <details className="group rounded-2xl border border-slate-100 bg-white p-3 shadow-sm transition active:scale-[0.99] open:border-[#c9d7e5]">
+      <summary className="mb-3 flex cursor-pointer list-none items-start justify-between gap-3">
         <div>
           <span className="rounded-full bg-[#e8f1f8] px-2.5 py-1 text-xs font-semibold text-harbor">
             {record.category}
@@ -188,7 +199,7 @@ function RecordCard({ record }: { record: RecordRow }) {
         <span className="shrink-0 rounded-full bg-[#eef8f6] px-2.5 py-1 text-xs font-semibold text-teal-soft">
           {record.status}
         </span>
-      </div>
+      </summary>
       <div className="grid grid-cols-2 gap-2 text-sm">
         <div className="rounded-xl bg-[#f8fafc] p-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Patient</p>
@@ -199,6 +210,11 @@ function RecordCard({ record }: { record: RecordRow }) {
           <p className="mt-0.5 font-medium text-slate-700">{record.date}</p>
         </div>
       </div>
-    </article>
+      <div className="mt-3 rounded-xl bg-[#f8fafc] p-3 text-sm leading-6 text-slate-600">
+        <p><span className="font-semibold text-slate-deep">Record:</span> {record.title}</p>
+        <p><span className="font-semibold text-slate-deep">Status:</span> {record.status}</p>
+        <p><span className="font-semibold text-slate-deep">Details:</span> Notes, side effects, lab values, documents, and timestamps appear here when available.</p>
+      </div>
+    </details>
   );
 }

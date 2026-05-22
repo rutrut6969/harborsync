@@ -2,6 +2,7 @@ import { Bell, Download, KeyRound, Mail, MapPin, ShieldCheck, Trash2, UserRound,
 import { auth } from "@/lib/auth";
 import { getProfileData } from "@/lib/data";
 import { changePassword } from "@/app/actions/password";
+import { inviteUser, resendInvite, revokeInvite } from "@/app/actions/invitations";
 import { Card, SectionHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -9,6 +10,9 @@ type SettingsPageProps = {
   searchParams?: Promise<{
     passwordError?: string;
     passwordUpdated?: string;
+    inviteError?: string;
+    inviteSent?: string;
+    inviteRevoked?: string;
   }>;
 };
 
@@ -16,6 +20,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const session = await auth();
   const profile = await getProfileData(session?.user?.id ?? "");
   const params = await searchParams;
+  const baseUrl = (process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? "").replace(/\/$/, "");
 
   return (
     <div className="space-y-5">
@@ -25,7 +30,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         <p className="mt-1 text-sm text-slate-500">Manage security, contact preferences, family access, and sharing controls.</p>
       </div>
 
-      <Card id="notifications">
+      <Card>
         <SectionHeader title="Account Information" />
         <div className="flex items-center gap-4">
           <div className="grid size-14 place-items-center rounded-3xl bg-[#e8f1f8] text-lg font-bold text-harbor">
@@ -84,7 +89,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         </Card>
       </div>
 
-      <Card id="family-management">
+      <Card id="notifications">
         <SectionHeader title="Notification Preferences" />
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {["Medication reminders", "Bloodwork reminders", "Case updates", "Document uploads", "Organization messages", "Weekly summaries"].map((item) => (
@@ -96,18 +101,123 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         </div>
       </Card>
 
-      <Card>
+      <Card id="family-management">
         <SectionHeader title="Family Management" />
+        {params?.inviteError ? (
+          <div className="mb-4 rounded-2xl border border-[#f1cdcd] bg-[#fff5f5] px-4 py-3 text-sm font-medium text-error-muted">
+            {params.inviteError}
+          </div>
+        ) : null}
+        {params?.inviteSent ? (
+          <div className="mb-4 rounded-2xl border border-[#cce7d5] bg-[#f2fbf5] px-4 py-3 text-sm font-medium text-[#4d8b63]">
+            Invite sent or resent. If email delivery is limited by your provider, the invite remains available here.
+          </div>
+        ) : null}
+        {params?.inviteRevoked ? (
+          <div className="mb-4 rounded-2xl border border-[#f0debd] bg-[#fffaf0] px-4 py-3 text-sm font-medium text-[#9a6a23]">
+            Invite revoked.
+          </div>
+        ) : null}
         <div className="grid gap-3 lg:grid-cols-3">
           <ManagementTile icon={UsersRound} title="Family Members" description="Invite adults, caregivers, and support people. Update relationship and permissions." />
           <ManagementTile icon={UserRound} title="Child Management" description="Manage child profiles, medical notes, emergency contacts, organizations, and cases." />
           <ManagementTile icon={ShieldCheck} title="Child Permissions" description="Control who can view, upload, log, export, and invite for each child." />
         </div>
-        <div className="mt-4 rounded-2xl border border-slate-100 p-3">
-          <p className="font-semibold">Pending Invitations</p>
-          <p className="mt-1 text-sm text-slate-500">
-            {profile.invitations.length ? `${profile.invitations.length} invitations found. Resend, revoke, approve, and deny actions will be enabled as invitation workflows mature.` : "No pending invitations right now."}
-          </p>
+        <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <div className="rounded-2xl border border-slate-100 p-3">
+            <p className="font-semibold">Invite Access</p>
+            <p className="mt-1 text-sm text-slate-500">Invite caregivers, caseworkers, advocates, and read-only reviewers to the correct family or case.</p>
+            <form action={inviteUser} className="mt-4 grid gap-3">
+              <label className="space-y-1.5">
+                <span className="text-sm font-semibold text-slate-700">Email</span>
+                <input name="email" type="email" required placeholder="caseworker@example.org" className={fieldClass} />
+              </label>
+              <label className="space-y-1.5">
+                <span className="text-sm font-semibold text-slate-700">Role</span>
+                <select name="role" required className={fieldClass} defaultValue="CAREGIVER">
+                  <option value="FAMILY_MEMBER">Family Member</option>
+                  <option value="CAREGIVER">Caregiver</option>
+                  <option value="CPS_CASEWORKER">CPS Caseworker</option>
+                  <option value="ADVOCATE">Advocate</option>
+                  <option value="READ_ONLY">Read Only</option>
+                </select>
+              </label>
+              <label className="space-y-1.5">
+                <span className="text-sm font-semibold text-slate-700">Family group</span>
+                <select name="familyGroupId" className={fieldClass} defaultValue={profile.familyMemberships[0]?.familyGroupId ?? ""}>
+                  <option value="">No family access</option>
+                  {profile.familyMemberships.map((membership) => (
+                    <option key={membership.familyGroupId} value={membership.familyGroupId}>
+                      {membership.familyGroup.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="space-y-1.5">
+                <span className="text-sm font-semibold text-slate-700">Case access</span>
+                <select name="caseId" className={fieldClass} defaultValue="">
+                  <option value="">No case access</option>
+                  {profile.caseParticipants.map((participant) => (
+                    <option key={participant.caseId} value={participant.caseId}>
+                      {participant.case.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="space-y-1.5">
+                <span className="text-sm font-semibold text-slate-700">Organization</span>
+                <select name="organizationId" className={fieldClass} defaultValue="">
+                  <option value="">No organization access</option>
+                  {profile.organizationMemberships.map((membership) => (
+                    <option key={membership.organizationId} value={membership.organizationId}>
+                      {membership.organization.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <Button type="submit" className="w-full">Send invite</Button>
+            </form>
+          </div>
+
+          <div className="rounded-2xl border border-slate-100 p-3">
+            <p className="font-semibold">Pending Invitations</p>
+            <div className="mt-3 space-y-3">
+              {profile.invitations.length ? (
+                profile.invitations.map((invite) => (
+                  <div key={invite.id} className="rounded-2xl bg-[#f8fafc] p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold">{invite.email}</p>
+                        <p className="text-sm text-slate-500">
+                          {toTitle(invite.role)} - {invite.familyGroup?.name ?? invite.case?.title ?? invite.organization?.name ?? "General access"}
+                        </p>
+                      </div>
+                      <Badge>{toTitle(invite.status)}</Badge>
+                    </div>
+                    {invite.status === "PENDING" ? (
+                      <div className="mt-3 space-y-2">
+                        <p className="break-all rounded-xl bg-white px-3 py-2 text-xs text-slate-500">
+                          Invite link: {baseUrl ? `${baseUrl}/invite/${invite.token}` : `/invite/${invite.token}`}
+                        </p>
+                        <div className="flex gap-2">
+                        <form action={resendInvite}>
+                          <input type="hidden" name="invitationId" value={invite.id} />
+                          <button type="submit" className="touch-target rounded-2xl bg-[#e8f1f8] px-3 text-xs font-semibold text-harbor">Resend</button>
+                        </form>
+                        <form action={revokeInvite}>
+                          <input type="hidden" name="invitationId" value={invite.id} />
+                          <button type="submit" className="touch-target rounded-2xl bg-[#fff5f5] px-3 text-xs font-semibold text-error-muted">Revoke</button>
+                        </form>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                ))
+              ) : (
+                <p className="rounded-2xl bg-[#f8fafc] p-3 text-sm text-slate-500">No pending invitations right now.</p>
+              )}
+            </div>
+          </div>
         </div>
       </Card>
 
@@ -202,3 +312,5 @@ function toTitle(value: string) {
 }
 
 const FileIcon = ShieldCheck;
+const fieldClass =
+  "min-h-11 w-full rounded-2xl border border-border bg-white px-4 text-sm outline-none transition focus:border-harbor focus:ring-4 focus:ring-[#3A6EA5]/10";

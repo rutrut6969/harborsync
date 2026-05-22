@@ -33,5 +33,19 @@ export async function canWriteChildRecord(userId: string, childId: string) {
     }
   });
 
-  return Boolean(permission);
+  if (permission) return true;
+
+  const membership = await prisma.familyMembership.findFirst({
+    where: {
+      userId,
+      role: { in: writeRoles },
+      familyGroup: {
+        children: {
+          some: { childId }
+        }
+      }
+    }
+  });
+
+  return Boolean(membership);
 }
