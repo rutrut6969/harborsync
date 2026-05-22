@@ -84,7 +84,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         </Card>
       </div>
 
-      <Card>
+      <Card id="family-management">
         <SectionHeader title="Notification Preferences" />
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {["Medication reminders", "Bloodwork reminders", "Case updates", "Document uploads", "Organization messages", "Weekly summaries"].map((item) => (

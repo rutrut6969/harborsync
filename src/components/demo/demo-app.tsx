@@ -2,18 +2,24 @@
 
 import {
   Activity,
+  BellRing,
   Building2,
   CalendarDays,
+  ChevronDown,
   FileText,
   FolderOpen,
   HeartPulse,
   Home,
   LockKeyhole,
+  LogOut,
   Pill,
   PlusCircle,
+  Settings,
   ShieldCheck,
+  UsersRound,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import type { LucideIcon } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   demoActivity,
   demoCases,
@@ -55,7 +61,7 @@ export function DemoApp() {
     <div className="min-h-screen overflow-x-clip bg-background pb-28 text-slate-deep md:pb-0">
       <header className="sticky top-0 z-30 border-b border-white/70 bg-background/95 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
-          <div className="flex items-center gap-3">
+          <div className="hidden items-center gap-3 md:flex">
             <div className="grid size-10 place-items-center rounded-2xl bg-harbor text-lg font-bold text-white shadow-sm">
               H
             </div>
@@ -64,6 +70,16 @@ export function DemoApp() {
               <p className="text-xs text-slate-500">Safe sandbox environment</p>
             </div>
           </div>
+          <DemoMobileAccountMenu
+            onNavigate={(nextTab) => {
+              setTab(nextTab);
+              setNotice("");
+            }}
+            onLogout={() => {
+              setTab("home");
+              setNotice("Demo logout simulated. You are still viewing the safe public sandbox.");
+            }}
+          />
           <span className="rounded-full bg-[#eef8f6] px-3 py-1.5 text-xs font-semibold text-teal-soft">
             Fake data only
           </span>
@@ -140,6 +156,86 @@ export function DemoApp() {
         </div>
       </nav>
     </div>
+  );
+}
+
+function DemoMobileAccountMenu({ onNavigate, onLogout }: { onNavigate: (tab: DemoTab) => void; onLogout: () => void }) {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onPointerDown(event: PointerEvent) {
+      if (!menuRef.current?.contains(event.target as Node)) setOpen(false);
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, []);
+
+  return (
+    <div ref={menuRef} className="relative min-w-0 md:hidden">
+      <button
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+        className="flex min-w-0 items-center gap-3 rounded-2xl py-1.5 pr-2 text-left transition focus:outline-none focus:ring-4 focus:ring-[#dfeaf5]"
+      >
+        <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-[#e8f1f8] text-sm font-bold text-harbor shadow-sm">
+          JP
+        </div>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold leading-tight">Jordan Parker</p>
+          <p className="truncate text-xs text-slate-500">Family Admin - Demo</p>
+        </div>
+        <ChevronDown className={cn("shrink-0 text-slate-400 transition", open && "rotate-180")} size={15} aria-hidden />
+      </button>
+
+      <div
+        role="menu"
+        className={cn(
+          "fixed left-3 right-3 top-[4.25rem] z-50 origin-top rounded-2xl border border-white bg-white p-2 safe-top calm-shadow transition",
+          open ? "scale-100 opacity-100" : "pointer-events-none scale-95 opacity-0"
+        )}
+      >
+        <div className="border-b border-slate-100 px-3 py-3">
+          <p className="font-semibold">Jordan Parker</p>
+          <p className="truncate text-sm text-slate-500">demo.family@harborsync.test</p>
+        </div>
+        <DemoMenuButton icon={Settings} label="Account Settings" onClick={() => setOpen(false)} />
+        <DemoMenuButton icon={BellRing} label="Notification Preferences" onClick={() => setOpen(false)} />
+        <DemoMenuButton icon={Building2} label="Organization Access" onClick={() => { onNavigate("access"); setOpen(false); }} />
+        <DemoMenuButton icon={UsersRound} label="Family Management" onClick={() => { onNavigate("access"); setOpen(false); }} />
+        <div className="mt-1 border-t border-slate-100 pt-1">
+          <DemoMenuButton icon={LogOut} label="Log Out" danger onClick={() => { onLogout(); setOpen(false); }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DemoMenuButton({ icon: Icon, label, onClick, danger }: { icon: LucideIcon; label: string; onClick: () => void; danger?: boolean }) {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      onClick={onClick}
+      className={cn(
+        "touch-target flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition",
+        danger ? "text-error-muted hover:bg-[#fff7f7]" : "text-slate-600 hover:bg-[#eef4fa] hover:text-harbor"
+      )}
+    >
+      <Icon size={17} aria-hidden />
+      {label}
+    </button>
   );
 }
 

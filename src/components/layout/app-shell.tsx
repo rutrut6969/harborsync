@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { FileText, Home, PlusCircle, FolderOpen } from "lucide-react";
-import { AccountMenu } from "@/components/layout/account-menu";
+import { AccountMenu, MobileAccountMenu } from "@/components/layout/account-menu";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { NotificationsPopover } from "@/components/layout/notifications-popover";
 
@@ -18,7 +18,7 @@ export function AppShell({ user, children }: AppShellProps) {
     <div className="min-h-screen overflow-x-clip scroll-pb-28 pb-28 text-slate-deep md:pb-0">
       <header className="sticky top-0 z-30 border-b border-white/70 bg-background/90 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
-          <Link href="/" className="flex items-center gap-3">
+          <Link href="/" className="hidden items-center gap-3 md:flex">
             <div className="grid size-10 place-items-center rounded-2xl bg-harbor text-lg font-bold text-white shadow-sm">
               H
             </div>
@@ -27,6 +27,9 @@ export function AppShell({ user, children }: AppShellProps) {
               <p className="text-xs text-slate-500">Connected Family Coordination</p>
             </div>
           </Link>
+          <div className="min-w-0 md:hidden">
+            <MobileAccountMenu user={user} />
+          </div>
           <div className="flex items-center gap-2">
             <NotificationsPopover />
             <AccountMenu user={user} />
