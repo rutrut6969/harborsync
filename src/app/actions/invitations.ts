@@ -182,6 +182,9 @@ export async function acceptInvite(formData: FormData) {
 }
 
 async function assertFamilyAdmin(userId: string, familyGroupId?: string, caseId?: string) {
+  const platformAdmin = await prisma.user.findUnique({ where: { id: userId }, select: { platformRole: true } });
+  if (platformAdmin?.platformRole === "PLATFORM_ADMIN") return;
+
   if (familyGroupId) {
     const admin = await prisma.familyMembership.findFirst({
       where: { userId, familyGroupId, role: "FAMILY_ADMIN" }

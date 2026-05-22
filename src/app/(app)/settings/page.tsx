@@ -1,4 +1,5 @@
 import { Bell, Download, KeyRound, Mail, MapPin, ShieldCheck, Trash2, UserRound, UsersRound } from "lucide-react";
+import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { getProfileData } from "@/lib/data";
 import { changePassword } from "@/app/actions/password";
@@ -119,9 +120,9 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
           </div>
         ) : null}
         <div className="grid gap-3 lg:grid-cols-3">
-          <ManagementTile icon={UsersRound} title="Family Members" description="Invite adults, caregivers, and support people. Update relationship and permissions." />
-          <ManagementTile icon={UserRound} title="Child Management" description="Manage child profiles, medical notes, emergency contacts, organizations, and cases." />
-          <ManagementTile icon={ShieldCheck} title="Child Permissions" description="Control who can view, upload, log, export, and invite for each child." />
+          <ManagementTile href="/settings/family" icon={UsersRound} title="Family Members" description="Invite adults, caregivers, and support people. Update relationship and permissions." />
+          <ManagementTile href="/settings/children" icon={UserRound} title="Child Management" description="Manage child profiles, medical notes, emergency contacts, organizations, and cases." />
+          <ManagementTile href="/settings/invites" icon={ShieldCheck} title="Invites & Permissions" description="Control who can view, upload, log, export, and invite for each child." />
         </div>
         <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <div className="rounded-2xl border border-slate-100 p-3">
@@ -271,13 +272,13 @@ function SettingRow({ icon: Icon, label, value }: { icon: React.ElementType; lab
   );
 }
 
-function ManagementTile({ icon: Icon, title, description }: { icon: React.ElementType; title: string; description: string }) {
+function ManagementTile({ href, icon: Icon, title, description }: { href: string; icon: React.ElementType; title: string; description: string }) {
   return (
-    <div className="rounded-2xl border border-slate-100 p-4">
+    <Link href={href} className="block rounded-2xl border border-slate-100 p-4 transition hover:border-[#c9d7e5] hover:bg-[#f8fbfd]">
       <Icon className="mb-3 text-harbor" size={22} aria-hidden />
       <p className="font-semibold">{title}</p>
       <p className="mt-1 text-sm leading-6 text-slate-500">{description}</p>
-    </div>
+    </Link>
   );
 }
 

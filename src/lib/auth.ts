@@ -97,9 +97,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       const approvedUser = await prisma.user.findUnique({
         where: { email },
-        select: { id: true }
+        select: { id: true, authorizedEmail: { select: { status: true } } }
       });
-      if (approvedUser) return true;
+      if (approvedUser && approvedUser.authorizedEmail?.status !== "SUSPENDED" && approvedUser.authorizedEmail?.status !== "REVOKED") return true;
+
+      const authorizedEmail = await prisma.authorizedEmail.findUnique({
+        where: { email },
+        select: { status: true }
+      });
+      if (authorizedEmail?.status === "AUTHORIZED" || authorizedEmail?.status === "INVITED" || authorizedEmail?.status === "ACTIVE") return true;
 
       const pendingInvite = await prisma.invitation.findFirst({
         where: {

@@ -16,6 +16,43 @@ enum UserRole {
   READ_ONLY
 }
 
+enum PlatformRole {
+  USER
+  PLATFORM_ADMIN
+}
+
+enum AuthorizedEmailStatus {
+  AUTHORIZED
+  INVITED
+  ACTIVE
+  SUSPENDED
+  REVOKED
+}
+
+enum ApplicationStatus {
+  PENDING
+  NEEDS_REVIEW
+  APPROVED
+  DENIED
+  WAITLISTED
+}
+
+enum ApplicationType {
+  FAMILY
+  CASEWORKER
+  ADVOCATE
+  ORGANIZATION
+}
+
+enum AccountType {
+  FAMILY
+  CAREGIVER
+  CASEWORKER
+  ADVOCATE
+  ORGANIZATION_ADMIN
+  READ_ONLY
+}
+
 enum OrganizationType {
   CPS
   NONPROFIT
@@ -76,25 +113,52 @@ enum AuditAction {
   LOG_CREATED
   DOCUMENT_UPLOADED
   INVITATION_SENT
+  INVITATION_ACCEPTED
   CASE_UPDATED
   ACCESS_CHANGED
   ORGANIZATION_APPROVED
+  ORGANIZATION_DENIED
   FAMILY_CREATED
+  FAMILY_UPDATED
   CHILD_CREATED
+  CHILD_UPDATED
+  CHILD_ARCHIVED
+  USER_APPROVED
+  USER_DENIED
+  SENSITIVE_DATA_UPDATED
+  SENSITIVE_DATA_VIEWED
+  EXPORT_CREATED
 }
 
 model User {
-  id                  String    @id @default(cuid())
+  id                  String       @id @default(cuid())
   name                String?
-  email               String    @unique
+  preferredName       String?
+  email               String       @unique
   emailVerified       DateTime?
   image               String?
+  phone               String?
+  streetAddress       String?
+  city                String?
+  state               String?
+  zip                 String?
+  preferredContact    String?
+  relationshipToChild String?
+  adultMedications    String?
+  adultConditions     String?
+  emergencyContact    Json?
+  hasActiveCase       Boolean      @default(false)
+  caseworkerName      String?
+  caseworkerEmail     String?
+  caseworkerPhone     String?
+  onboardingCompleted Boolean      @default(false)
+  platformRole        PlatformRole @default(USER)
   passwordHash        String?
   passwordSetAt       DateTime?
   resetTokenHash      String?
   resetTokenExpiresAt DateTime?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
 
   accounts                Account[]
   sessions                Session[]
@@ -110,6 +174,10 @@ model User {
   sentInvitations         Invitation[]             @relation("InvitationSender")
   receivedInvitations     Invitation[]             @relation("InvitationRecipient")
   childPermissions        ChildPermission[]
+  authorizedEmail         AuthorizedEmail?
+  submittedApplications   Application[]            @relation("ApplicationSubmitter")
+  reviewedApplications    Application[]            @relation("ApplicationReviewer")
+  sensitiveProfileData    SensitiveProfileData?
 }
 
 model Account {
@@ -157,10 +225,12 @@ model Organization {
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 
-  memberships    OrganizationMembership[]
-  sponsoredCases Case[]
-  sponsorships   FamilySponsorship[]
-  invitations    Invitation[]
+  memberships      OrganizationMembership[]
+  sponsoredCases   Case[]
+  sponsorships     FamilySponsorship[]
+  invitations      Invitation[]
+  applications     Application[]
+  authorizedEmails AuthorizedEmail[]
 }
 
 model OrganizationMembership {
@@ -206,24 +276,31 @@ model FamilyMembership {
 }
 
 model ChildProfile {
-  id                 String   @id @default(cuid())
+  id                 String    @id @default(cuid())
   fullName           String
   dateOfBirth        DateTime
+  email              String?
+  phone              String?
+  streetAddress      String?
   allergies          String?
   conditions         String?
   currentMedications String?
   emergencyContacts  Json?
   primaryDoctor      String?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  notes              String?
+  caseworkerInfo     Json?
+  archivedAt         DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
-  families       FamilyChild[]
-  cases          CaseChild[]
-  medicationLogs MedicationLog[]
-  doctorVisits   DoctorVisitLog[]
-  bloodworkLogs  BloodworkLog[]
-  documents      Document[]
-  permissions    ChildPermission[]
+  families             FamilyChild[]
+  cases                CaseChild[]
+  medicationLogs       MedicationLog[]
+  doctorVisits         DoctorVisitLog[]
+  bloodworkLogs        BloodworkLog[]
+  documents            Document[]
+  permissions          ChildPermission[]
+  sensitiveProfileData SensitiveProfileData?
 }
 
 model FamilyChild {
@@ -424,9 +501,12 @@ model AuditLog {
 model Invitation {
   id             String           @id @default(cuid())
   email          String
+  name           String?
   role           UserRole
+  accountType    AccountType?
   status         InvitationStatus @default(PENDING)
   token          String           @unique
+  message        String?
   senderId       String
   recipientId    String?
   familyGroupId  String?
@@ -442,6 +522,65 @@ model Invitation {
   case         Case?         @relation(fields: [caseId], references: [id], onDelete: Cascade)
 
   @@index([email, status])
+}
+
+model AuthorizedEmail {
+  id             String                @id @default(cuid())
+  email          String                @unique
+  name           String?
+  defaultRole    UserRole              @default(READ_ONLY)
+  accountType    AccountType           @default(FAMILY)
+  status         AuthorizedEmailStatus @default(AUTHORIZED)
+  userId         String?               @unique
+  organizationId String?
+  createdById    String?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+}
+
+model Application {
+  id               String            @id @default(cuid())
+  type             ApplicationType
+  status           ApplicationStatus @default(PENDING)
+  email            String
+  name             String?
+  organizationName String?
+  organizationId   String?
+  submittedById    String?
+  reviewedById     String?
+  reviewedAt       DateTime?
+  notes            String?
+  metadata         Json?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  submittedBy  User?         @relation("ApplicationSubmitter", fields: [submittedById], references: [id], onDelete: SetNull)
+  reviewedBy   User?         @relation("ApplicationReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([status, type])
+  @@index([email])
+}
+
+model SensitiveProfileData {
+  id                  String   @id @default(cuid())
+  userId              String?  @unique
+  childId             String?  @unique
+  encryptedSSN        String?
+  ssnLast4            String?
+  encryptedMedicalId  String?
+  encryptedMedicaidId String?
+  encryptedNotes      String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user  User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  child ChildProfile? @relation(fields: [childId], references: [id], onDelete: Cascade)
 }
 
 model FamilySponsorship {

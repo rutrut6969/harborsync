@@ -15,11 +15,15 @@ export default async function ProtectedLayout({
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { passwordHash: true }
+    select: { passwordHash: true, onboardingCompleted: true }
   });
 
   if (!user?.passwordHash) {
     redirect("/set-password");
+  }
+
+  if (!user.onboardingCompleted) {
+    redirect("/onboarding");
   }
 
   return <AppShell user={session.user}>{children}</AppShell>;

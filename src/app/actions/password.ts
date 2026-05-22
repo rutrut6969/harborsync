@@ -15,12 +15,15 @@ export async function signInWithPassword(formData: FormData) {
   const user = email
     ? await prisma.user.findUnique({
         where: { email },
-        select: { id: true, passwordHash: true }
+        select: { id: true, passwordHash: true, authorizedEmail: { select: { status: true } } }
       })
     : null;
 
   const isValid = user?.passwordHash ? await verifyPassword(password, user.passwordHash) : false;
   if (!user || !isValid) redirect("/sign-in?error=credentials");
+  if (user.authorizedEmail?.status === "SUSPENDED" || user.authorizedEmail?.status === "REVOKED") {
+    redirect("/sign-in?error=not-approved");
+  }
 
   await createDatabaseSession(user.id);
   redirect("/");

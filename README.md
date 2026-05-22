@@ -184,13 +184,57 @@ The current app supports audit logging for:
 - Log creation.
 - Document uploads.
 - Invitations.
+- Invitation acceptance.
+- Role and access changes.
 - Case updates.
 - Access changes.
 - Organization approvals.
 - Family creation.
 - Child creation.
+- Child updates and safe archiving.
+- Platform admin approval actions.
+- Sensitive data view/update events when enabled.
 
 The activity system is designed to answer who did what, when, and in relation to which child, case, or document.
+
+### Platform Admin
+
+HarborSync now includes a platform admin role separate from family and case roles. Platform admins can access `/admin` to review applications, manage authorized emails, approve or deny access, monitor families, children, cases, organizations, invite activity, and recent audit logs.
+
+Primary seeded platform admin:
+
+- Email: `isaac.rutledgev@obsidian-systems.tech`
+- Local/demo password: `HarborSyncTest123!`
+
+Platform admin access is intentionally separate from `FAMILY_ADMIN`. A family admin manages their own family context, while a platform admin manages system-level access and approvals.
+
+### Authorized Email Access
+
+HarborSync is approval-based. Users can activate accounts only when their email is authorized by the platform admin, approved through an application, or invited through an allowed family/case workflow.
+
+Authorized email statuses:
+
+- `AUTHORIZED`
+- `INVITED`
+- `ACTIVE`
+- `SUSPENDED`
+- `REVOKED`
+
+Google sign-in is also permission-gated. If an unknown or unauthorized Google account tries to sign in, the app shows:
+
+> "This email has not been approved for HarborSync access yet."
+
+### Onboarding
+
+First-time users are guided through onboarding if their profile is incomplete. Adult onboarding collects contact information, address details, preferred contact method, relationship context, optional medical notes, optional emergency contact, and optional caseworker contact information.
+
+If a parent enters caseworker contact details during onboarding, HarborSync can create an invite flow so the professional receives access only after approval and assignment.
+
+### Sensitive Data Architecture
+
+The data model includes a `SensitiveProfileData` structure for future sensitive fields such as SSN, medical ID, Medicaid ID, and sensitive notes.
+
+Sensitive data features are disabled safely unless `FIELD_ENCRYPTION_KEY` is configured. When enabled, sensitive values are encrypted server-side, full SSNs are never displayed after save, and access should be tightly permissioned and audited.
 
 ## Current Tech Stack
 
@@ -362,6 +406,22 @@ npm run typecheck
 npm run build
 ```
 
+### Seeded Test Accounts
+
+Local/demo seeding creates these safe fake users for testing only:
+
+| Role | Email | Password |
+| --- | --- | --- |
+| Platform admin | `isaac.rutledgev@obsidian-systems.tech` | `HarborSyncTest123!` |
+| Parent / family admin | `jane.parent@harborsync.test` | `HarborSyncTest123!` |
+| Parent / family member | `sam.parent@harborsync.test` | `HarborSyncTest123!` |
+| Caseworker | `caseworker.demo@harborsync.test` | `HarborSyncTest123!` |
+| Advocate | `advocate.demo@harborsync.test` | `HarborSyncTest123!` |
+
+These accounts use fake data and are intended for local development, UI review, and demo validation. Do not use real family data in seeded accounts.
+
+`rutledgeisaac6969@gmail.com` is kept as an authorized blank account for Google sign-in testing. It is intentionally not connected to seeded family, child, case, or organization data.
+
 ## Deployment
 
 HarborSync is designed for Vercel deployment with PostgreSQL provided by Prisma Postgres or another compatible hosted Postgres provider.
@@ -374,6 +434,7 @@ Deployments run `prisma migrate deploy` during `npm run build`, so Vercel applie
 - `AUTH_RESEND_KEY` or `RESEND_API_KEY`
 - `EMAIL_FROM`
 - `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` if Google sign-in is enabled
+- `FIELD_ENCRYPTION_KEY` when sensitive-data storage is enabled
 - Upload provider variables when real uploads are enabled
 
 ## Product Status

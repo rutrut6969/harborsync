@@ -1,8 +1,10 @@
 import { PrismaClient, Prisma } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
 async function main() {
+  const testPassword = await bcrypt.hash("HarborSyncTest123!", 12);
   const user = await prisma.user.upsert({
     where: { email: "demo@harborsync.app" },
     update: {},
@@ -17,26 +19,65 @@ async function main() {
       prisma.user.upsert({
         where: { email },
         update: {
-          name: "Isaac Rutledge"
+          name: "Isaac Rutledge",
+          platformRole: "PLATFORM_ADMIN",
+          onboardingCompleted: true
         },
         create: {
           email,
-          name: "Isaac Rutledge"
+          name: "Isaac Rutledge",
+          platformRole: "PLATFORM_ADMIN",
+          onboardingCompleted: true,
+          passwordHash: testPassword,
+          passwordSetAt: new Date()
         }
       })
     )
   );
 
-  await prisma.user.upsert({
+  await prisma.authorizedEmail.upsert({
     where: { email: "rutledgeisaac6969@gmail.com" },
-    update: {
-      name: "Isaac Rutledge"
-    },
-    create: {
-      email: "rutledgeisaac6969@gmail.com",
-      name: "Isaac Rutledge"
-    }
+    update: { status: "AUTHORIZED", defaultRole: "FAMILY_ADMIN", accountType: "FAMILY" },
+    create: { email: "rutledgeisaac6969@gmail.com", status: "AUTHORIZED", defaultRole: "FAMILY_ADMIN", accountType: "FAMILY" }
   });
+
+  const janeParent = await prisma.user.upsert({
+    where: { email: "jane.parent@harborsync.test" },
+    update: { name: "Jane Parker", onboardingCompleted: true, passwordHash: testPassword, passwordSetAt: new Date() },
+    create: { email: "jane.parent@harborsync.test", name: "Jane Parker", onboardingCompleted: true, passwordHash: testPassword, passwordSetAt: new Date() }
+  });
+
+  const samParent = await prisma.user.upsert({
+    where: { email: "sam.parent@harborsync.test" },
+    update: { name: "Sam Parker", onboardingCompleted: true, passwordHash: testPassword, passwordSetAt: new Date() },
+    create: { email: "sam.parent@harborsync.test", name: "Sam Parker", onboardingCompleted: true, passwordHash: testPassword, passwordSetAt: new Date() }
+  });
+
+  const caseworkerUser = await prisma.user.upsert({
+    where: { email: "caseworker.demo@harborsync.test" },
+    update: { name: "Casey Walker", onboardingCompleted: true, passwordHash: testPassword, passwordSetAt: new Date() },
+    create: { email: "caseworker.demo@harborsync.test", name: "Casey Walker", onboardingCompleted: true, passwordHash: testPassword, passwordSetAt: new Date() }
+  });
+
+  const advocateUser = await prisma.user.upsert({
+    where: { email: "advocate.demo@harborsync.test" },
+    update: { name: "Ava Advocate", onboardingCompleted: true, passwordHash: testPassword, passwordSetAt: new Date() },
+    create: { email: "advocate.demo@harborsync.test", name: "Ava Advocate", onboardingCompleted: true, passwordHash: testPassword, passwordSetAt: new Date() }
+  });
+
+  for (const seededUser of [
+    { user: adminUsers[0], role: "FAMILY_ADMIN", accountType: "FAMILY" },
+    { user: janeParent, role: "FAMILY_ADMIN", accountType: "FAMILY" },
+    { user: samParent, role: "FAMILY_MEMBER", accountType: "FAMILY" },
+    { user: caseworkerUser, role: "CPS_CASEWORKER", accountType: "CASEWORKER" },
+    { user: advocateUser, role: "ADVOCATE", accountType: "ADVOCATE" }
+  ]) {
+    await prisma.authorizedEmail.upsert({
+      where: { email: seededUser.user.email },
+      update: { status: "ACTIVE", defaultRole: seededUser.role, accountType: seededUser.accountType, userId: seededUser.user.id },
+      create: { email: seededUser.user.email, name: seededUser.user.name, status: "ACTIVE", defaultRole: seededUser.role, accountType: seededUser.accountType, userId: seededUser.user.id }
+    });
+  }
 
   const family = await prisma.familyGroup.upsert({
     where: { id: "demo-family-parker" },
@@ -48,20 +89,17 @@ async function main() {
     }
   });
 
-  await prisma.familyMembership.upsert({
-    where: {
-      familyGroupId_userId: {
-        familyGroupId: family.id,
-        userId: user.id
-      }
-    },
-    update: { role: "FAMILY_ADMIN" },
-    create: {
-      familyGroupId: family.id,
-      userId: user.id,
-      role: "FAMILY_ADMIN"
-    }
-  });
+  for (const member of [
+    { userId: user.id, role: "FAMILY_ADMIN" },
+    { userId: janeParent.id, role: "FAMILY_ADMIN" },
+    { userId: samParent.id, role: "FAMILY_MEMBER" }
+  ]) {
+    await prisma.familyMembership.upsert({
+      where: { familyGroupId_userId: { familyGroupId: family.id, userId: member.userId } },
+      update: { role: member.role },
+      create: { familyGroupId: family.id, userId: member.userId, role: member.role }
+    });
+  }
 
   for (const adminUser of adminUsers) {
     await prisma.familyMembership.upsert({
@@ -139,7 +177,7 @@ async function main() {
       }
     }).catch(() => undefined);
 
-    for (const adminUser of adminUsers) {
+    for (const adminUser of [...adminUsers, janeParent, samParent]) {
       await prisma.childPermission.create({
         data: {
           childId: child.id,
@@ -202,6 +240,20 @@ async function main() {
         role: "FAMILY_ADMIN"
       }
     });
+  }
+
+  for (const participant of [
+    { userId: janeParent.id, role: "FAMILY_ADMIN" },
+    { userId: samParent.id, role: "FAMILY_MEMBER" },
+    { userId: caseworkerUser.id, role: "CPS_CASEWORKER" },
+    { userId: advocateUser.id, role: "ADVOCATE" }
+  ]) {
+    await prisma.caseParticipant.upsert({
+      where: { caseId_userId: { caseId: careCase.id, userId: participant.userId } },
+      update: { role: participant.role },
+      create: { caseId: careCase.id, userId: participant.userId, role: participant.role }
+    });
+    await prisma.childPermission.create({ data: { childId: avery.id, userId: participant.userId, role: participant.role, caseId: careCase.id } }).catch(() => undefined);
   }
 
   await prisma.medicationLog.create({
