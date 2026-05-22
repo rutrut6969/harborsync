@@ -15,7 +15,7 @@ type AppShellProps = {
 
 export function AppShell({ user, children }: AppShellProps) {
   return (
-    <div className="min-h-screen scroll-pb-28 pb-28 text-slate-deep md:pb-0">
+    <div className="min-h-screen overflow-x-clip scroll-pb-28 pb-28 text-slate-deep md:pb-0">
       <header className="sticky top-0 z-30 border-b border-white/70 bg-background/90 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
           <Link href="/" className="flex items-center gap-3">

@@ -40,7 +40,7 @@ export function NotificationsPopover() {
       </button>
       <div
         className={cn(
-          "absolute right-[-4.25rem] top-14 z-50 w-[min(22rem,calc(100vw-2rem))] origin-top-right rounded-2xl border border-white bg-white p-3 calm-shadow transition sm:right-0",
+          "fixed left-4 right-4 top-[4.5rem] z-50 origin-top rounded-2xl border border-white bg-white p-3 calm-shadow transition sm:absolute sm:left-auto sm:right-0 sm:top-14 sm:w-[22rem] sm:origin-top-right",
           open ? "scale-100 opacity-100" : "pointer-events-none scale-95 opacity-0"
         )}
       >

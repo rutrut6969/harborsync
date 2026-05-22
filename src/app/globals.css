@@ -29,9 +29,14 @@
   box-sizing: border-box;
 }
 
+html {
+  overflow-x: clip;
+}
+
 body {
   min-height: 100vh;
   scroll-padding-bottom: 7rem;
+  overflow-x: clip;
   background:
     radial-gradient(circle at top left, rgba(79, 167, 160, 0.11), transparent 28rem),
     var(--background);
