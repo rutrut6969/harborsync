@@ -53,7 +53,7 @@ export function NotificationsPopover() {
             compact
             icon={Inbox}
             title="No notifications yet"
-            description="Updates, reminders, and case activity will appear here."
+            description="Updates, reminders, uploads, and case activity will appear here."
             className="border-slate-100 bg-[#f8fafc]"
           />
         </div>

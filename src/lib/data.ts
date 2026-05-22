@@ -228,15 +228,29 @@ export async function getChildForUser(userId: string, childId: string) {
 }
 
 export async function getProfileData(userId: string) {
-  const [familyMemberships, organizationMemberships, caseParticipants] = await Promise.all([
+  const children = await getAccessibleChildren(userId);
+  const childIds = children.map((child) => child.id);
+
+  const [user, familyMemberships, organizationMemberships, caseParticipants, medicationLogs, bloodworkLogs, doctorVisits, documents, auditLogs, invitations] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        image: true,
+        emailVerified: true,
+        passwordSetAt: true,
+        createdAt: true
+      }
+    }),
     prisma.familyMembership.findMany({
       where: { userId },
       include: {
         familyGroup: {
           include: {
-            children: {
-              include: { child: true }
-            }
+            memberships: { include: { user: true }, orderBy: { createdAt: "asc" } },
+            children: { include: { child: true } }
           }
         }
       },
@@ -260,13 +274,131 @@ export async function getProfileData(userId: string) {
         }
       },
       orderBy: { createdAt: "desc" }
+    }),
+    prisma.medicationLog.findMany({
+      where: { childId: { in: childIds } },
+      include: { child: true },
+      orderBy: { createdAt: "desc" },
+      take: 6
+    }),
+    prisma.bloodworkLog.findMany({
+      where: { childId: { in: childIds } },
+      include: { child: true },
+      orderBy: { createdAt: "desc" },
+      take: 6
+    }),
+    prisma.doctorVisitLog.findMany({
+      where: { childId: { in: childIds } },
+      include: { child: true },
+      orderBy: { createdAt: "desc" },
+      take: 6
+    }),
+    prisma.document.findMany({
+      where: {
+        OR: [
+          { childId: { in: childIds } },
+          {
+            case: {
+              children: {
+                some: { childId: { in: childIds } }
+              }
+            }
+          }
+        ]
+      },
+      include: { child: true },
+      orderBy: { createdAt: "desc" },
+      take: 6
+    }),
+    prisma.auditLog.findMany({
+      where: {
+        OR: [
+          { actorId: userId },
+          { childId: { in: childIds } }
+        ]
+      },
+      orderBy: { createdAt: "desc" },
+      take: 8
+    }),
+    prisma.invitation.findMany({
+      where: {
+        OR: [
+          { senderId: userId },
+          { recipientId: userId }
+        ]
+      },
+      orderBy: { createdAt: "desc" },
+      take: 5
     })
   ]);
 
+  const recentUpdates = [
+    ...medicationLogs.map((log) => ({
+      id: log.id,
+      type: "Medication",
+      title: `${log.medicationName} logged`,
+      description: `${toTitle(log.status)} at ${log.timeGiven}${log.administeredByName ? ` by ${log.administeredByName}` : ""}`,
+      timestamp: format(log.createdAt, "MMM d, h:mm a"),
+      related: log.child.fullName,
+      status: toTitle(log.status)
+    })),
+    ...bloodworkLogs.map((log) => ({
+      id: log.id,
+      type: "Bloodwork",
+      title: log.labReason ?? "Bloodwork added",
+      description: log.facility ? `Lab result from ${log.facility}` : "Lab result recorded",
+      timestamp: format(log.createdAt, "MMM d, h:mm a"),
+      related: log.child.fullName,
+      status: log.followUpRequired ? "Follow-up" : "Complete"
+    })),
+    ...doctorVisits.map((log) => ({
+      id: log.id,
+      type: "Doctor Visit",
+      title: log.reasonForVisit,
+      description: `${log.doctorName}${log.specialty ? ` - ${log.specialty}` : ""}`,
+      timestamp: format(log.createdAt, "MMM d, h:mm a"),
+      related: log.child.fullName,
+      status: log.followUpRequired ? "Follow-up" : "Complete"
+    })),
+    ...documents.map((document) => ({
+      id: document.id,
+      type: "Document",
+      title: document.title,
+      description: `${toTitle(document.type)} uploaded`,
+      timestamp: format(document.createdAt, "MMM d, h:mm a"),
+      related: document.child?.fullName ?? "Case file",
+      status: "Uploaded"
+    })),
+    ...auditLogs.map((log) => ({
+      id: log.id,
+      type: "Activity",
+      title: toTitle(log.action),
+      description: log.message,
+      timestamp: format(log.createdAt, "MMM d, h:mm a"),
+      related: log.childId ? "Child record" : log.caseId ? "Case" : "Workspace",
+      status: "Tracked"
+    }))
+  ].slice(0, 8);
+
+  const childActivity = new Map<string, Date>();
+  for (const update of [...medicationLogs, ...bloodworkLogs, ...doctorVisits]) {
+    const current = childActivity.get(update.childId);
+    if (!current || update.createdAt > current) childActivity.set(update.childId, update.createdAt);
+  }
+
   return {
+    user,
+    children,
     familyMemberships,
     organizationMemberships,
-    caseParticipants
+    caseParticipants,
+    recentUpdates,
+    invitations,
+    childSummaries: children.map((child) => ({
+      ...child,
+      latestActivity: childActivity.get(child.id) ? format(childActivity.get(child.id) as Date, "MMM d") : "No recent activity",
+      newCount: recentUpdates.filter((update) => update.related === child.fullName).length
+    }))
   };
 }
 

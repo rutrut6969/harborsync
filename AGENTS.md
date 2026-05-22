@@ -4,9 +4,9 @@ These rules are persistent standards for all future HarborSync development. They
 
 ## Product Identity
 
-HarborSync is a calm, trustworthy, emotionally safe, family-centered coordination and case support platform. It serves parents, caregivers, advocates, caseworkers, and family support organizations.
+HarborSync is a calm, trustworthy, emotionally safe, family-centered, organization-capable coordination and support platform. It serves parents, caregivers, advocates, caseworkers, nonprofits, support organizations, and family assistance groups.
 
-The app should never feel overwhelming, enterprise-heavy, fintech-like, cluttered, harsh, or overly clinical.
+The app should never feel cold, overwhelming, enterprise-heavy, fintech-like, cluttered, overly clinical, or "startup gimmicky".
 
 Every screen should answer: "Can a stressed parent use this quickly with one hand?"
 
@@ -38,7 +38,7 @@ All features must work on small screens first.
 
 HarborSync must maintain a live public demo at `/demo` or a future demo domain.
 
-Demo mode must be safe for investors, organizations, testers, and UI reviews:
+Demo mode must be safe for investors, organizations, testers, advisors, and UI reviews:
 
 - Use fake seeded data only.
 - Never expose production data.
@@ -49,9 +49,11 @@ Demo mode must be safe for investors, organizations, testers, and UI reviews:
 - Never expose secrets or tokens.
 - Demo uploads must be simulated or isolated to sandbox storage.
 
-The demo should reuse production layouts, components, navigation patterns, styling, and UX wherever practical. Demo differences should affect only data source, permissions, side effects, notifications, uploads, and integrations.
+The demo should reuse production layouts, components, navigation patterns, styling, and UX. Demo differences should affect only data source, permissions, side effects, notifications, uploads, and integrations. Do not create a separate stale demo app.
 
 Always display subtle demo context such as: "Demo Mode - sample data only".
+
+Demo should showcase dashboard, records, logs, documents, notifications, profile, settings, organization access, family management, and activity feeds with realistic fake data. Demo actions must remain simulated only.
 
 ## Authentication Direction
 
@@ -79,7 +81,7 @@ Desktop:
 
 - Do not put Profile in the desktop sidebar.
 - Account access belongs in the top-right avatar/profile dropdown.
-- Dropdown items: Profile, Account Settings, Organization Access, Sign Out.
+- Dropdown items: Profile, Account Settings, Organization Access, Notification Preferences, Sign Out.
 
 Mobile:
 
@@ -93,9 +95,11 @@ If empty, show an empty state with:
 
 - Icon
 - "No notifications yet"
-- "Updates, reminders, and case activity will appear here."
+- "Updates, reminders, uploads, and case activity will appear here."
 
 Architecture should support reminders, case updates, uploads, organization actions, and family activity.
+
+Demo mode should include mock notifications with title, timestamp, icon, short description, and read/unread state.
 
 ## Records Center
 
@@ -143,6 +147,54 @@ Tone should be calm, supportive, human, and reassuring.
 
 Avoid layout jumps.
 
+## Profile And Settings Architecture
+
+Profile and Settings are separate concepts.
+
+Profile is identity, activity, and relationships. It should feel like a personal dashboard for the current user and include:
+
+- Profile image/avatar
+- Full name and email
+- Primary role badge
+- Family group badge
+- Organization badge when applicable
+- Account status
+- Last active placeholder
+- Recent visible updates
+- Family relationship panel with unread/new activity badges
+- Child profile quick access
+- Connections to organizations, active cases, family groups, advocates, caseworkers, and sponsorship status
+- Important information such as emergency contacts, permissions summary, pending invites, pending approvals, and documents needing review
+
+Settings is for account, security, contact, family management, permissions, and preferences. Do not combine all settings into Profile.
+
+Settings should include:
+
+- Account information
+- Contact information
+- Security controls
+- Notification preferences
+- Privacy and sharing
+- Family management
+- Danger zone
+
+## Family Management
+
+Qualified users, especially `FAMILY_ADMIN` and guardians, should manage family and child data from their own account. Do not require separate child logins.
+
+Family management should support:
+
+- Adding adult members
+- Inviting caregivers
+- Removing members
+- Updating relationships
+- Updating permissions
+- Managing child profile fields
+- Managing child permissions
+- Reviewing pending invitations
+
+Suggested permission presets include Parent/Admin, Caregiver, Caseworker, Advocate, and Read Only.
+
 ## Component And Architecture Rules
 
 Prefer reusable components, modular architecture, small focused files, scalable patterns, and accessibility support.
@@ -160,5 +212,8 @@ Preserve scalability for:
 - Assistance applications
 - MyChart/FHIR integrations
 - Family sponsorship systems
+- AI-assisted assistance workflows
+- Income verification workflows
+- Government assistance coordination
 
 Do not prematurely overengineer these future integrations.

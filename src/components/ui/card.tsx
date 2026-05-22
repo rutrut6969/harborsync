@@ -2,13 +2,11 @@ import { cn } from "@/lib/utils";
 
 export function Card({
   className,
-  children
-}: {
-  className?: string;
-  children: React.ReactNode;
-}) {
+  children,
+  ...props
+}: React.ComponentPropsWithoutRef<"section">) {
   return (
-    <section className={cn("rounded-2xl border border-white bg-white p-4 calm-shadow", className)}>
+    <section className={cn("rounded-2xl border border-white bg-white p-4 calm-shadow", className)} {...props}>
       {children}
     </section>
   );

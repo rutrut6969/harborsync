@@ -124,15 +124,15 @@ export async function changePassword(formData: FormData) {
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
   const validationError = validatePassword(password);
 
-  if (validationError) redirect(`/profile?passwordError=${encodeURIComponent(validationError)}`);
-  if (password !== confirmPassword) redirect("/profile?passwordError=Passwords%20do%20not%20match.");
+  if (validationError) redirect(`/settings?passwordError=${encodeURIComponent(validationError)}`);
+  if (password !== confirmPassword) redirect("/settings?passwordError=Passwords%20do%20not%20match.");
 
   const user = await prisma.user.findUnique({ where: { id: session.user.id } });
   if (!user) redirect("/sign-in");
 
   if (user.passwordHash) {
     const isValid = await verifyPassword(currentPassword, user.passwordHash);
-    if (!isValid) redirect("/profile?passwordError=Current%20password%20is%20incorrect.");
+    if (!isValid) redirect("/settings?passwordError=Current%20password%20is%20incorrect.");
   }
 
   await prisma.user.update({
@@ -143,7 +143,7 @@ export async function changePassword(formData: FormData) {
     }
   });
 
-  redirect("/profile?passwordUpdated=true");
+  redirect("/settings?passwordUpdated=true");
 }
 
 async function createDatabaseSession(userId: string) {

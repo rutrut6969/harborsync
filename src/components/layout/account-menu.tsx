@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Building2, ChevronDown, LogOut, Settings, UserRound } from "lucide-react";
+import { BellRing, Building2, ChevronDown, LogOut, Settings, UserRound } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { signOutUser } from "@/app/actions/session";
@@ -69,8 +69,9 @@ export function AccountMenu({ user }: AccountMenuProps) {
           <p className="truncate text-sm text-slate-500">{user?.email}</p>
         </div>
         <MenuLink href="/profile" icon={UserRound} label="Profile" onClick={() => setOpen(false)} />
-        <MenuLink href="/profile" icon={Settings} label="Account Settings" onClick={() => setOpen(false)} />
-        <MenuLink href="/profile" icon={Building2} label="Organization Access" onClick={() => setOpen(false)} />
+        <MenuLink href="/settings" icon={Settings} label="Account Settings" onClick={() => setOpen(false)} />
+        <MenuLink href="/organization-access" icon={Building2} label="Organization Access" onClick={() => setOpen(false)} />
+        <MenuLink href="/settings#notifications" icon={BellRing} label="Notification Preferences" onClick={() => setOpen(false)} />
         <form action={signOutUser} className="mt-1 border-t border-slate-100 pt-1">
           <button
             type="submit"
