@@ -5,7 +5,7 @@ import { getDashboardData } from "@/lib/data";
 import { Card, SectionHeader } from "@/components/ui/card";
 import { ExpandableCard } from "@/components/ui/expandable-card";
 
-export default async function HomePage() {
+export default async function DashboardPage() {
   const session = await auth();
   const { activity, children, recentLogs, upcoming } = await getDashboardData(session?.user?.id ?? "");
 
@@ -13,16 +13,10 @@ export default async function HomePage() {
     <div className="space-y-5">
       <section className="rounded-[1.75rem] bg-slate-deep p-5 text-white calm-shadow">
         <p className="text-sm text-white/70">Today</p>
-        <h1 className="mt-1 max-w-lg text-2xl font-semibold leading-tight">
-          Everything important is in one calm place.
-        </h1>
+        <h1 className="mt-1 max-w-lg text-2xl font-semibold leading-tight">Everything important is in one calm place.</h1>
         <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {quickActions.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="touch-target rounded-2xl bg-white/10 p-3 text-sm font-medium text-white transition hover:bg-white/15"
-            >
+            <Link key={item.href} href={item.href} className="touch-target rounded-2xl bg-white/10 p-3 text-sm font-medium text-white transition hover:bg-white/15">
               <item.icon className="mb-2" size={20} aria-hidden />
               {item.label}
             </Link>
@@ -70,11 +64,7 @@ export default async function HomePage() {
             <SectionHeader title="Children" />
             <div className="space-y-3">
               {children.map((child) => (
-              <Link
-                  key={child.id}
-                  href={`/children/${child.id}?from=home`}
-                  className="block rounded-2xl border border-slate-100 p-3 transition hover:border-[#c8d8e8] hover:bg-[#f7fafc]"
-                >
+                <Link key={child.id} href={`/children/${child.id}?from=dashboard`} className="block rounded-2xl border border-slate-100 p-3 transition hover:border-[#c8d8e8] hover:bg-[#f7fafc]">
                   <p className="font-semibold">{child.fullName}</p>
                   <p className="text-sm text-slate-500">{child.conditions}</p>
                   <p className="mt-2 text-xs font-medium text-teal-soft">{child.primaryDoctor}</p>
@@ -90,9 +80,7 @@ export default async function HomePage() {
                 <Pill className="text-warning" size={22} aria-hidden />
                 <p className="font-medium">Reminder scheduling placeholder</p>
               </div>
-              <p className="mt-2 text-sm text-slate-500">
-                The V1 data model is ready for reminders; notification scheduling can be activated later.
-              </p>
+              <p className="mt-2 text-sm text-slate-500">The V1 data model is ready for reminders; notification scheduling can be activated later.</p>
             </div>
           </Card>
 

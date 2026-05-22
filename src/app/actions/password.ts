@@ -27,7 +27,7 @@ export async function signInWithPassword(formData: FormData) {
 
   await createDatabaseSession(user.id);
   if (user.platformRole === "SUPER_ADMIN" || user.platformRole === "PLATFORM_ADMIN") redirect("/admin");
-  redirect("/");
+  redirect("/dashboard");
 }
 
 export async function createPassword(formData: FormData) {

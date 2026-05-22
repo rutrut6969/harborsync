@@ -9,8 +9,12 @@ export async function submitApplication(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const organizationName = String(formData.get("organizationName") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
+  const intendedUse = String(formData.get("intendedUse") ?? "").trim();
+  const teamSize = String(formData.get("teamSize") ?? "").trim();
+  const goals = String(formData.get("goals") ?? "").trim();
+  const returnPath = String(formData.get("returnPath") ?? "/apply");
 
-  if (!email) redirect("/applications?error=Email%20is%20required.");
+  if (!email) redirect(`${returnPath}?error=Email%20is%20required.`);
 
   await prisma.application.create({
     data: {
@@ -18,9 +22,14 @@ export async function submitApplication(formData: FormData) {
       email,
       name,
       organizationName: organizationName || null,
-      notes: notes || null
+      notes: [intendedUse, teamSize, goals, notes].filter(Boolean).join("\n\n") || null,
+      metadata: {
+        intendedUse,
+        teamSize,
+        goals
+      }
     }
   });
 
-  redirect("/applications?submitted=true");
+  redirect(`${returnPath}?submitted=true`);
 }

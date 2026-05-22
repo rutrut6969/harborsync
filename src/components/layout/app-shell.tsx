@@ -18,7 +18,7 @@ export function AppShell({ user, children }: AppShellProps) {
     <div className="min-h-screen overflow-x-clip scroll-pb-28 pb-28 text-slate-deep md:pb-0">
       <header className="sticky top-0 z-30 border-b border-white/70 bg-background/90 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
-          <Link href="/" className="hidden items-center gap-3 md:flex">
+          <Link href="/dashboard" className="hidden items-center gap-3 md:flex">
             <div className="grid size-10 place-items-center rounded-2xl bg-harbor text-lg font-bold text-white shadow-sm">
               H
             </div>
@@ -61,7 +61,7 @@ export function AppShell({ user, children }: AppShellProps) {
 }
 
 const desktopLinks = [
-  { href: "/", label: "Home", icon: Home },
+  { href: "/dashboard", label: "Home", icon: Home },
   { href: "/records", label: "Records", icon: FolderOpen },
   { href: "/add-log", label: "Add Log", icon: PlusCircle },
   { href: "/documents", label: "Documents", icon: FileText }

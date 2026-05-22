@@ -6,7 +6,7 @@ import { FileText, FolderOpen, Home, PlusCircle, UserRound } from "lucide-react"
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/", label: "Home", icon: Home },
+  { href: "/dashboard", label: "Home", icon: Home },
   { href: "/records", label: "Records", icon: FolderOpen },
   { href: "/add-log", label: "Add Log", icon: PlusCircle },
   { href: "/documents", label: "Docs", icon: FileText },
