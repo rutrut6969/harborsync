@@ -46,3 +46,7 @@ AUTH_GOOGLE_SECRET="your-google-client-secret"
 ## Product Boundaries
 
 V1 intentionally excludes billing, AI features, SMS, MyChart/FHIR/Apple Health integrations, advanced analytics, enterprise dashboards, and marketplace APIs.
+
+## Development Rules
+
+Persistent HarborSync product, UX, demo, and architecture standards live in `AGENTS.md`. Future changes should follow those rules unless the product direction is intentionally updated.
