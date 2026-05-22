@@ -2,6 +2,8 @@ import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import Resend from "next-auth/providers/resend";
 import { PrismaAdapter } from "@auth/prisma-adapter";
+import type { Adapter, AdapterSession } from "next-auth/adapters";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 const resendApiKey = cleanEnv(process.env.AUTH_RESEND_KEY ?? process.env.RESEND_API_KEY);
@@ -11,9 +13,25 @@ const googleClientSecret = cleanEnv(process.env.AUTH_GOOGLE_SECRET ?? process.en
 const authSecret = cleanEnv(process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET);
 
 export const isGoogleAuthEnabled = Boolean(googleClientId && googleClientSecret);
+const adapter = PrismaAdapter(prisma) as Adapter;
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: PrismaAdapter(prisma),
+  adapter: {
+    ...adapter,
+    async deleteSession(sessionToken): Promise<AdapterSession | undefined> {
+      try {
+        return await prisma.session.delete({
+          where: { sessionToken }
+        });
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+          return undefined;
+        }
+
+        throw error;
+      }
+    }
+  },
   secret: authSecret,
   trustHost: true,
   session: {
