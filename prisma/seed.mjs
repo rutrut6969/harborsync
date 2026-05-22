@@ -13,12 +13,12 @@ async function main() {
   });
 
   const adminUser = await prisma.user.upsert({
-    where: { email: "rutledgeisaac6969@gmail.com" },
+    where: { email: "isaac.rutledgev@obsidian-systems.tech" },
     update: {
       name: "Isaac Rutledge"
     },
     create: {
-      email: "rutledgeisaac6969@gmail.com",
+      email: "isaac.rutledgev@obsidian-systems.tech",
       name: "Isaac Rutledge"
     }
   });
