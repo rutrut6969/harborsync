@@ -227,6 +227,49 @@ export async function getChildForUser(userId: string, childId: string) {
   });
 }
 
+export async function getProfileData(userId: string) {
+  const [familyMemberships, organizationMemberships, caseParticipants] = await Promise.all([
+    prisma.familyMembership.findMany({
+      where: { userId },
+      include: {
+        familyGroup: {
+          include: {
+            children: {
+              include: { child: true }
+            }
+          }
+        }
+      },
+      orderBy: { createdAt: "desc" }
+    }),
+    prisma.organizationMembership.findMany({
+      where: { userId },
+      include: { organization: true },
+      orderBy: { createdAt: "desc" }
+    }),
+    prisma.caseParticipant.findMany({
+      where: { userId },
+      include: {
+        case: {
+          include: {
+            sponsoringOrganization: true,
+            children: {
+              include: { child: true }
+            }
+          }
+        }
+      },
+      orderBy: { createdAt: "desc" }
+    })
+  ]);
+
+  return {
+    familyMemberships,
+    organizationMemberships,
+    caseParticipants
+  };
+}
+
 function toTitle(value: string) {
   return value
     .toLowerCase()

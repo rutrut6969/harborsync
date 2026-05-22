@@ -24,6 +24,8 @@ HarborSync is a mobile-first family coordination and health/case documentation M
 4. Run `npm run prisma:migrate`.
 5. Start with `npm run dev`.
 
+Deployments run `prisma migrate deploy` during `npm run build`, so Vercel applies committed migrations before building the app.
+
 For Resend magic links before a custom domain is verified, use:
 
 ```env

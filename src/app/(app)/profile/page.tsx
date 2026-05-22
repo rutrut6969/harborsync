@@ -1,13 +1,36 @@
-import { Building2, ShieldCheck, UsersRound } from "lucide-react";
+import { Building2, LogOut, ShieldCheck, UsersRound } from "lucide-react";
+import { auth } from "@/lib/auth";
+import { getProfileData } from "@/lib/data";
+import { signOutUser } from "@/app/(app)/profile/actions";
+import { Button } from "@/components/ui/button";
 import { Card, SectionHeader } from "@/components/ui/card";
 
-export default function ProfilePage() {
+export default async function ProfilePage() {
+  const session = await auth();
+  const profile = await getProfileData(session?.user?.id ?? "");
+
   return (
     <div className="space-y-5">
       <div>
         <p className="text-sm font-medium text-teal-soft">Account and access</p>
         <h1 className="text-2xl font-semibold">Profile</h1>
       </div>
+
+      <Card>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-medium text-teal-soft">Signed in as</p>
+            <h2 className="mt-1 text-xl font-semibold">{session?.user?.name ?? "HarborSync user"}</h2>
+            <p className="text-sm text-slate-500">{session?.user?.email}</p>
+          </div>
+          <form action={signOutUser}>
+            <Button type="submit" variant="secondary" className="w-full sm:w-auto">
+              <LogOut size={17} aria-hidden />
+              Sign out
+            </Button>
+          </form>
+        </div>
+      </Card>
 
       <Card>
         <SectionHeader title="Relationship-Based Access" />
@@ -21,6 +44,59 @@ export default function ProfilePage() {
           ))}
         </div>
       </Card>
+
+      <div className="grid gap-5 lg:grid-cols-2">
+        <Card>
+          <SectionHeader title="Family Access" />
+          <div className="space-y-3">
+            {profile.familyMemberships.length ? (
+              profile.familyMemberships.map((membership) => (
+                <div key={membership.id} className="rounded-2xl border border-slate-100 p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-semibold">{membership.familyGroup.name}</p>
+                    <span className="rounded-full bg-[#e8f1f8] px-2.5 py-1 text-xs font-semibold text-harbor">
+                      {membership.role.replace("_", " ")}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {membership.familyGroup.children.map((child) => child.child.fullName).join(", ")}
+                  </p>
+                </div>
+              ))
+            ) : (
+              <p className="rounded-2xl bg-[#f8fafc] p-3 text-sm text-slate-500">No family access yet.</p>
+            )}
+          </div>
+        </Card>
+
+        <Card>
+          <SectionHeader title="Cases" />
+          <div className="space-y-3">
+            {profile.caseParticipants.length ? (
+              profile.caseParticipants.map((participant) => (
+                <div key={participant.id} className="rounded-2xl border border-slate-100 p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-semibold">{participant.case.title}</p>
+                    <span className="rounded-full bg-[#eef8f6] px-2.5 py-1 text-xs font-semibold text-teal-soft">
+                      {participant.case.status}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {participant.case.children.map((child) => child.child.fullName).join(", ")}
+                  </p>
+                  {participant.case.sponsoringOrganization ? (
+                    <p className="mt-2 text-xs font-medium text-harbor">
+                      Sponsored by {participant.case.sponsoringOrganization.name}
+                    </p>
+                  ) : null}
+                </div>
+              ))
+            ) : (
+              <p className="rounded-2xl bg-[#f8fafc] p-3 text-sm text-slate-500">No active cases yet.</p>
+            )}
+          </div>
+        </Card>
+      </div>
 
       <Card>
         <SectionHeader title="Organization Registration" />

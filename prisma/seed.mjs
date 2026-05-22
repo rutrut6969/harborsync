@@ -12,16 +12,20 @@ async function main() {
     }
   });
 
-  const adminUser = await prisma.user.upsert({
-    where: { email: "isaac.rutledgev@obsidian-systems.tech" },
-    update: {
-      name: "Isaac Rutledge"
-    },
-    create: {
-      email: "isaac.rutledgev@obsidian-systems.tech",
-      name: "Isaac Rutledge"
-    }
-  });
+  const adminUsers = await Promise.all(
+    ["isaac.rutledgev@obsidian-systems.tech", "rutledgeisaac6969@gmail.com"].map((email) =>
+      prisma.user.upsert({
+        where: { email },
+        update: {
+          name: "Isaac Rutledge"
+        },
+        create: {
+          email,
+          name: "Isaac Rutledge"
+        }
+      })
+    )
+  );
 
   const family = await prisma.familyGroup.upsert({
     where: { id: "demo-family-parker" },
@@ -48,20 +52,22 @@ async function main() {
     }
   });
 
-  await prisma.familyMembership.upsert({
-    where: {
-      familyGroupId_userId: {
+  for (const adminUser of adminUsers) {
+    await prisma.familyMembership.upsert({
+      where: {
+        familyGroupId_userId: {
+          familyGroupId: family.id,
+          userId: adminUser.id
+        }
+      },
+      update: { role: "FAMILY_ADMIN" },
+      create: {
         familyGroupId: family.id,
-        userId: adminUser.id
+        userId: adminUser.id,
+        role: "FAMILY_ADMIN"
       }
-    },
-    update: { role: "FAMILY_ADMIN" },
-    create: {
-      familyGroupId: family.id,
-      userId: adminUser.id,
-      role: "FAMILY_ADMIN"
-    }
-  });
+    });
+  }
 
   const avery = await prisma.childProfile.upsert({
     where: { id: "demo-child-avery" },
@@ -122,13 +128,15 @@ async function main() {
       }
     }).catch(() => undefined);
 
-    await prisma.childPermission.create({
-      data: {
-        childId: child.id,
-        userId: adminUser.id,
-        role: "FAMILY_ADMIN"
-      }
-    }).catch(() => undefined);
+    for (const adminUser of adminUsers) {
+      await prisma.childPermission.create({
+        data: {
+          childId: child.id,
+          userId: adminUser.id,
+          role: "FAMILY_ADMIN"
+        }
+      }).catch(() => undefined);
+    }
   }
 
   const organization = await prisma.organization.upsert({
@@ -168,20 +176,22 @@ async function main() {
     }
   });
 
-  await prisma.caseParticipant.upsert({
-    where: {
-      caseId_userId: {
+  for (const adminUser of adminUsers) {
+    await prisma.caseParticipant.upsert({
+      where: {
+        caseId_userId: {
+          caseId: careCase.id,
+          userId: adminUser.id
+        }
+      },
+      update: { role: "FAMILY_ADMIN" },
+      create: {
         caseId: careCase.id,
-        userId: adminUser.id
+        userId: adminUser.id,
+        role: "FAMILY_ADMIN"
       }
-    },
-    update: { role: "FAMILY_ADMIN" },
-    create: {
-      caseId: careCase.id,
-      userId: adminUser.id,
-      role: "FAMILY_ADMIN"
-    }
-  });
+    });
+  }
 
   await prisma.medicationLog.create({
     data: {

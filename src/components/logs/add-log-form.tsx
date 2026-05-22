@@ -5,7 +5,6 @@ import { useFieldArray, useForm } from "react-hook-form";
 import type { FieldValues, Path, UseFormRegister, UseFormRegisterReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FileHeart, Pill, Plus, Stethoscope } from "lucide-react";
-import { children } from "@/lib/demo-data";
 import {
   bulkMedicationSchema,
   medicationLogSchema,
@@ -24,24 +23,49 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 type LogType = "medication" | "bulk" | "doctor" | "bloodwork";
+type Notice = { type: "success" | "error"; text: string };
+type ChildOption = {
+  id: string;
+  name: string;
+};
 
-export function AddLogForm({ initialType }: { initialType?: string }) {
+export function AddLogForm({
+  initialType,
+  childOptions
+}: {
+  initialType?: string;
+  childOptions: ChildOption[];
+}) {
   const [type, setType] = useState<LogType>(normalizeType(initialType));
-  const [savedMessage, setSavedMessage] = useState("");
+  const [notice, setNotice] = useState<Notice | null>(null);
+
+  if (childOptions.length === 0) {
+    return (
+      <div className="space-y-5">
+        <PageTitle />
+        <Card>
+          <div className="rounded-2xl bg-[#f8fafc] p-4 text-sm leading-6 text-slate-600">
+            No child profiles are connected to this account yet. Once a child profile is added or shared with you,
+            quick logging tools will appear here.
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
-      <div>
-        <p className="text-sm font-medium text-teal-soft">Fast daily entry</p>
-        <h1 className="text-2xl font-semibold">Add Log</h1>
-      </div>
+      <PageTitle />
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {logTypes.map((item) => (
           <button
             key={item.value}
             type="button"
-            onClick={() => setType(item.value)}
+            onClick={() => {
+              setType(item.value);
+              setNotice(null);
+            }}
             className={cn(
               "touch-target rounded-2xl border border-white bg-white p-3 text-left text-sm font-semibold text-slate-600 calm-shadow transition",
               type === item.value && "bg-[#e8f1f8] text-harbor ring-2 ring-[#c9ddec]"
@@ -53,28 +77,35 @@ export function AddLogForm({ initialType }: { initialType?: string }) {
         ))}
       </div>
 
-      {savedMessage ? (
-        <div className="rounded-2xl border border-[#cde7d6] bg-[#effaf3] p-3 text-sm font-medium text-[#417a54]">
-          {savedMessage}
+      {notice ? (
+        <div
+          className={cn(
+            "rounded-2xl border p-3 text-sm font-medium",
+            notice.type === "success"
+              ? "border-[#cde7d6] bg-[#effaf3] text-[#417a54]"
+              : "border-[#efcdcd] bg-[#fff7f7] text-[#9d4f4f]"
+          )}
+        >
+          {notice.text}
         </div>
       ) : null}
 
       {type === "bulk" ? (
-        <BulkMedicationForm onSaved={setSavedMessage} />
+        <BulkMedicationForm childOptions={childOptions} onNotice={setNotice} />
       ) : type === "doctor" ? (
-        <DoctorVisitForm onSaved={setSavedMessage} />
+        <DoctorVisitForm childOptions={childOptions} onNotice={setNotice} />
       ) : type === "bloodwork" ? (
-        <BloodworkForm onSaved={setSavedMessage} />
+        <BloodworkForm childOptions={childOptions} onNotice={setNotice} />
       ) : (
-        <MedicationForm onSaved={setSavedMessage} />
+        <MedicationForm childOptions={childOptions} onNotice={setNotice} />
       )}
     </div>
   );
 }
 
-function MedicationForm({ onSaved }: { onSaved: (message: string) => void }) {
-  const { register, handleSubmit } = useForm<MedicationLogInput>({
-    defaultValues: defaultMedication(),
+function MedicationForm({ childOptions, onNotice }: { childOptions: ChildOption[]; onNotice: (notice: Notice) => void }) {
+  const { register, handleSubmit, reset, formState } = useForm<MedicationLogInput>({
+    defaultValues: defaultMedication(childOptions[0]?.id),
     resolver: zodResolver(medicationLogSchema)
   });
 
@@ -83,21 +114,28 @@ function MedicationForm({ onSaved }: { onSaved: (message: string) => void }) {
       <form
         className="space-y-4"
         onSubmit={handleSubmit(async (values) => {
-          await createMedicationLog(values);
-          onSaved("Medication log saved.");
+          try {
+            await createMedicationLog(values);
+            reset(defaultMedication(values.childId));
+            onNotice({ type: "success", text: "Medication log saved and added to Records." });
+          } catch {
+            onNotice({ type: "error", text: "Medication log could not be saved. Please check the fields and try again." });
+          }
         })}
       >
-        <MedicationFields register={register} />
-        <Button className="w-full" type="submit">Save medication log</Button>
+        <MedicationFields childOptions={childOptions} register={register} />
+        <Button className="w-full" type="submit" disabled={formState.isSubmitting}>
+          {formState.isSubmitting ? "Saving..." : "Save medication log"}
+        </Button>
       </form>
     </Card>
   );
 }
 
-function BulkMedicationForm({ onSaved }: { onSaved: (message: string) => void }) {
+function BulkMedicationForm({ childOptions, onNotice }: { childOptions: ChildOption[]; onNotice: (notice: Notice) => void }) {
   const batchId = useMemo(() => `batch-${Date.now().toString(36)}`, []);
-  const { register, control, handleSubmit } = useForm<{ entries: MedicationLogInput[] }>({
-    defaultValues: { entries: [defaultMedication()] },
+  const { register, control, handleSubmit, reset, formState } = useForm<{ entries: MedicationLogInput[] }>({
+    defaultValues: { entries: [defaultMedication(childOptions[0]?.id)] },
     resolver: zodResolver(bulkMedicationSchema)
   });
   const { fields, append, remove } = useFieldArray({ control, name: "entries" });
@@ -107,12 +145,17 @@ function BulkMedicationForm({ onSaved }: { onSaved: (message: string) => void })
       <form
         className="space-y-4"
         onSubmit={handleSubmit(async (values) => {
-          await createBulkMedicationLog(values);
-          onSaved(`${values.entries.length} medication entries saved with ${batchId}.`);
+          try {
+            await createBulkMedicationLog(values);
+            reset({ entries: [defaultMedication(values.entries[0]?.childId ?? childOptions[0]?.id)] });
+            onNotice({ type: "success", text: `${values.entries.length} medication entries saved to Records.` });
+          } catch {
+            onNotice({ type: "error", text: "Bulk medication log could not be saved. Please review each entry." });
+          }
         })}
       >
         <div className="rounded-2xl bg-[#f4f8fb] p-3 text-sm text-slate-500">
-          Batch ID: <span className="font-semibold text-slate-deep">{batchId}</span> · Entry method: bulk
+          Batch ID: <span className="font-semibold text-slate-deep">{batchId}</span> - Entry method: bulk
         </div>
         {fields.map((field, index) => (
           <div key={field.id} className="rounded-2xl border border-slate-100 p-3">
@@ -124,28 +167,41 @@ function BulkMedicationForm({ onSaved }: { onSaved: (message: string) => void })
                 </button>
               ) : null}
             </div>
-            <MedicationFields prefix={`entries.${index}.`} register={register} />
+            <MedicationFields childOptions={childOptions} prefix={`entries.${index}.`} register={register} />
           </div>
         ))}
-        <Button type="button" variant="secondary" className="w-full" onClick={() => append(defaultMedication())}>
+        <Button type="button" variant="secondary" className="w-full" onClick={() => append(defaultMedication(childOptions[0]?.id))}>
           <Plus size={18} aria-hidden />
           Add Entry
         </Button>
-        <Button className="w-full" type="submit">Save bulk log</Button>
+        <Button className="w-full" type="submit" disabled={formState.isSubmitting}>
+          {formState.isSubmitting ? "Saving..." : "Save bulk log"}
+        </Button>
       </form>
     </Card>
   );
 }
 
-function DoctorVisitForm({ onSaved }: { onSaved: (message: string) => void }) {
-  const { register, handleSubmit } = useForm<DoctorVisitInput>();
+function DoctorVisitForm({ childOptions, onNotice }: { childOptions: ChildOption[]; onNotice: (notice: Notice) => void }) {
+  const { register, handleSubmit, reset, formState } = useForm<DoctorVisitInput>({
+    defaultValues: { childId: childOptions[0]?.id }
+  });
+
   return (
     <Card>
-      <form className="space-y-4" onSubmit={handleSubmit(async (values) => {
-        await createDoctorVisitLog(values);
-        onSaved("Doctor visit saved.");
-      })}>
-        <PatientSelect register={register("childId")} />
+      <form
+        className="space-y-4"
+        onSubmit={handleSubmit(async (values) => {
+          try {
+            await createDoctorVisitLog(values);
+            reset({ childId: values.childId });
+            onNotice({ type: "success", text: "Doctor visit saved and added to Records." });
+          } catch {
+            onNotice({ type: "error", text: "Doctor visit could not be saved. Please check required fields." });
+          }
+        })}
+      >
+        <PatientSelect childOptions={childOptions} register={register("childId")} />
         <Field label="Appointment date" type="date" {...register("appointmentDate")} />
         <Field label="Appointment time" type="time" {...register("appointmentTime")} />
         <Field label="Doctor name" {...register("doctorName")} />
@@ -157,21 +213,34 @@ function DoctorVisitForm({ onSaved }: { onSaved: (message: string) => void }) {
           <input type="checkbox" className="size-5 accent-[#3A6EA5]" {...register("followUpRequired")} />
         </label>
         <Field label="Follow-up date" type="date" {...register("followUpDate")} />
-        <Button className="w-full" type="submit">Save doctor visit</Button>
+        <Button className="w-full" type="submit" disabled={formState.isSubmitting}>
+          {formState.isSubmitting ? "Saving..." : "Save doctor visit"}
+        </Button>
       </form>
     </Card>
   );
 }
 
-function BloodworkForm({ onSaved }: { onSaved: (message: string) => void }) {
-  const { register, handleSubmit } = useForm<BloodworkInput>();
+function BloodworkForm({ childOptions, onNotice }: { childOptions: ChildOption[]; onNotice: (notice: Notice) => void }) {
+  const { register, handleSubmit, reset, formState } = useForm<BloodworkInput>({
+    defaultValues: { childId: childOptions[0]?.id }
+  });
+
   return (
     <Card>
-      <form className="space-y-4" onSubmit={handleSubmit(async (values) => {
-        await createBloodworkLog(values);
-        onSaved("Bloodwork log saved.");
-      })}>
-        <PatientSelect register={register("childId")} />
+      <form
+        className="space-y-4"
+        onSubmit={handleSubmit(async (values) => {
+          try {
+            await createBloodworkLog(values);
+            reset({ childId: values.childId });
+            onNotice({ type: "success", text: "Bloodwork saved and added to Records." });
+          } catch {
+            onNotice({ type: "error", text: "Bloodwork could not be saved. Please check required fields." });
+          }
+        })}
+      >
+        <PatientSelect childOptions={childOptions} register={register("childId")} />
         <Field label="Bloodwork date" type="date" {...register("bloodworkDate")} />
         <Field label="Facility" {...register("facility")} />
         <Field label="Ordering doctor" {...register("orderingDoctor")} />
@@ -186,16 +255,20 @@ function BloodworkForm({ onSaved }: { onSaved: (message: string) => void }) {
           Follow-up required
           <input type="checkbox" className="size-5 accent-[#3A6EA5]" {...register("followUpRequired")} />
         </label>
-        <Button className="w-full" type="submit">Save bloodwork</Button>
+        <Button className="w-full" type="submit" disabled={formState.isSubmitting}>
+          {formState.isSubmitting ? "Saving..." : "Save bloodwork"}
+        </Button>
       </form>
     </Card>
   );
 }
 
 function MedicationFields<T extends FieldValues>({
+  childOptions,
   register,
   prefix = ""
 }: {
+  childOptions: ChildOption[];
   register: UseFormRegister<T>;
   prefix?: string;
 }) {
@@ -203,7 +276,7 @@ function MedicationFields<T extends FieldValues>({
 
   return (
     <div className="space-y-3">
-      <PatientSelect register={register(field("childId"))} />
+      <PatientSelect childOptions={childOptions} register={register(field("childId"))} />
       <Field label="Medication name" {...register(field("medicationName"))} />
       <div className="grid grid-cols-[1fr_7rem] gap-3">
         <Field label="Dosage" inputMode="decimal" {...register(field("dosage"))} />
@@ -229,14 +302,16 @@ function MedicationFields<T extends FieldValues>({
   );
 }
 
-function PatientSelect({ register }: { register: UseFormRegisterReturn }) {
+function PatientSelect({ childOptions, register }: { childOptions: ChildOption[]; register: UseFormRegisterReturn }) {
   return (
     <label className="block">
       <span className="mb-1.5 block text-sm font-medium text-slate-600">Patient</span>
       <select className={inputClass} {...register}>
         <option value="">Choose patient</option>
-        {children.map((child) => (
-          <option key={child.id} value={child.id}>{child.name}</option>
+        {childOptions.map((child) => (
+          <option key={child.id} value={child.id}>
+            {child.name}
+          </option>
         ))}
       </select>
     </label>
@@ -261,10 +336,10 @@ function Textarea({ label, ...props }: React.TextareaHTMLAttributes<HTMLTextArea
   );
 }
 
-function defaultMedication(): MedicationLogInput {
+function defaultMedication(childId = ""): MedicationLogInput {
   const now = new Date();
   return {
-    childId: "",
+    childId,
     medicationName: "",
     dosage: 1,
     doseUnit: "mg",
@@ -282,6 +357,15 @@ function normalizeType(type?: string): LogType {
   if (type === "bloodwork") return "bloodwork";
   if (type === "bulk") return "bulk";
   return "medication";
+}
+
+function PageTitle() {
+  return (
+    <div>
+      <p className="text-sm font-medium text-teal-soft">Fast daily entry</p>
+      <h1 className="text-2xl font-semibold">Add Log</h1>
+    </div>
+  );
 }
 
 const logTypes = [

@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/lib/audit";
@@ -39,6 +40,7 @@ export async function createMedicationLog(input: unknown) {
     message: `Medication logged: ${data.medicationName}`
   });
 
+  revalidateCarePages();
   return log;
 }
 
@@ -74,6 +76,7 @@ export async function createBulkMedicationLog(input: unknown) {
     metadata: { batchId }
   });
 
+  revalidateCarePages();
   return logs;
 }
 
@@ -83,7 +86,7 @@ export async function createDoctorVisitLog(input: unknown) {
 
   const data = doctorVisitSchema.parse(input);
 
-  return prisma.doctorVisitLog.create({
+  const log = await prisma.doctorVisitLog.create({
     data: {
       childId: data.childId,
       appointmentDate: new Date(data.appointmentDate),
@@ -97,6 +100,16 @@ export async function createDoctorVisitLog(input: unknown) {
       createdById: session.user.id
     }
   });
+
+  await writeAuditLog({
+    actorId: session.user.id,
+    action: "LOG_CREATED",
+    childId: data.childId,
+    message: `Doctor visit logged: ${data.reasonForVisit}`
+  });
+
+  revalidateCarePages();
+  return log;
 }
 
 export async function createBloodworkLog(input: unknown) {
@@ -105,7 +118,7 @@ export async function createBloodworkLog(input: unknown) {
 
   const data = bloodworkSchema.parse(input);
 
-  return prisma.bloodworkLog.create({
+  const log = await prisma.bloodworkLog.create({
     data: {
       childId: data.childId,
       bloodworkDate: new Date(data.bloodworkDate),
@@ -120,4 +133,20 @@ export async function createBloodworkLog(input: unknown) {
       createdById: session.user.id
     }
   });
+
+  await writeAuditLog({
+    actorId: session.user.id,
+    action: "LOG_CREATED",
+    childId: data.childId,
+    message: `Bloodwork logged${data.facility ? ` from ${data.facility}` : ""}`
+  });
+
+  revalidateCarePages();
+  return log;
+}
+
+function revalidateCarePages() {
+  revalidatePath("/");
+  revalidatePath("/records");
+  revalidatePath("/documents");
 }
