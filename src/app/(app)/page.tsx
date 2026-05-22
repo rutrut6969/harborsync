@@ -1,9 +1,13 @@
 import Link from "next/link";
 import { CalendarDays, ClipboardPlus, FileHeart, Pill, PlusCircle, ShieldCheck } from "lucide-react";
-import { activity, children, recentLogs, upcoming } from "@/lib/demo-data";
+import { auth } from "@/lib/auth";
+import { getDashboardData } from "@/lib/data";
 import { Card, SectionHeader } from "@/components/ui/card";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const session = await auth();
+  const { activity, children, recentLogs, upcoming } = await getDashboardData(session?.user.id ?? "");
+
   return (
     <div className="space-y-5">
       <section className="rounded-[1.75rem] bg-slate-deep p-5 text-white calm-shadow">
@@ -70,14 +74,14 @@ export default function HomePage() {
             <SectionHeader title="Children" />
             <div className="space-y-3">
               {children.map((child) => (
-                <Link
+              <Link
                   key={child.id}
                   href={`/children/${child.id}`}
                   className="block rounded-2xl border border-slate-100 p-3 transition hover:border-[#c8d8e8] hover:bg-[#f7fafc]"
                 >
-                  <p className="font-semibold">{child.name}</p>
+                  <p className="font-semibold">{child.fullName}</p>
                   <p className="text-sm text-slate-500">{child.conditions}</p>
-                  <p className="mt-2 text-xs font-medium text-teal-soft">{child.doctor}</p>
+                  <p className="mt-2 text-xs font-medium text-teal-soft">{child.primaryDoctor}</p>
                 </Link>
               ))}
             </div>

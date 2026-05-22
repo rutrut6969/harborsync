@@ -1,9 +1,14 @@
 import { FilePlus2, LockKeyhole, Upload } from "lucide-react";
-import { documents } from "@/lib/demo-data";
+import { format } from "date-fns";
+import { auth } from "@/lib/auth";
+import { getDocuments } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { Card, SectionHeader } from "@/components/ui/card";
 
-export default function DocumentsPage() {
+export default async function DocumentsPage() {
+  const session = await auth();
+  const documents = await getDocuments(session?.user.id ?? "");
+
   return (
     <div className="space-y-5">
       <div>
@@ -36,10 +41,12 @@ export default function DocumentsPage() {
             <div key={document.id} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 p-3">
               <div>
                 <p className="font-semibold">{document.title}</p>
-                <p className="text-sm text-slate-500">{document.attachedTo} · {document.date}</p>
+                <p className="text-sm text-slate-500">
+                  {document.child?.fullName ?? "Case file"} · {format(document.createdAt, "MMM d, yyyy")}
+                </p>
               </div>
               <span className="rounded-full bg-[#e8f1f8] px-2.5 py-1 text-xs font-semibold text-harbor">
-                {document.type}
+                {document.type.replace("_", " ")}
               </span>
             </div>
           ))}

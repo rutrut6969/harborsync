@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, HeartPulse, Phone, UserRound } from "lucide-react";
-import { children } from "@/lib/demo-data";
+import { format } from "date-fns";
+import { auth } from "@/lib/auth";
+import { getChildForUser } from "@/lib/data";
 import { Card, SectionHeader } from "@/components/ui/card";
 
 export default async function ChildPage({
@@ -10,8 +12,10 @@ export default async function ChildPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const child = children.find((item) => item.id === id);
+  const session = await auth();
+  const child = await getChildForUser(session?.user.id ?? "", id);
   if (!child) notFound();
+  const emergencyContacts = parseEmergencyContacts(child.emergencyContacts);
 
   return (
     <div className="space-y-5">
@@ -26,8 +30,8 @@ export default async function ChildPage({
           </div>
           <div>
             <p className="text-sm font-medium text-teal-soft">Child Profile</p>
-            <h1 className="text-2xl font-semibold">{child.name}</h1>
-            <p className="text-sm text-slate-500">DOB {child.dob}</p>
+            <h1 className="text-2xl font-semibold">{child.fullName}</h1>
+            <p className="text-sm text-slate-500">DOB {format(child.dateOfBirth, "MMM d, yyyy")}</p>
           </div>
         </div>
       </Card>
@@ -38,27 +42,26 @@ export default async function ChildPage({
           <div className="space-y-3 text-sm">
             <Info label="Allergies" value={child.allergies} />
             <Info label="Conditions" value={child.conditions} />
-            <Info label="Current medications" value={child.medications} />
-            <Info label="Primary doctor" value={child.doctor} />
+            <Info label="Current medications" value={child.currentMedications ?? "None documented"} />
+            <Info label="Primary doctor" value={child.primaryDoctor ?? "Not documented"} />
           </div>
         </Card>
         <Card>
           <SectionHeader title="Emergency Contacts" />
           <div className="space-y-3">
-            <div className="flex gap-3 rounded-2xl bg-[#f4f8fb] p-3">
-              <Phone className="text-harbor" size={19} aria-hidden />
-              <div>
-                <p className="font-medium">Jane Smith</p>
-                <p className="text-sm text-slate-500">Parent · (555) 010-4100</p>
+            {emergencyContacts.map((contact, index) => (
+              <div key={`${contact.name}-${index}`} className="flex gap-3 rounded-2xl bg-[#f4f8fb] p-3">
+                {index === 0 ? (
+                  <Phone className="text-harbor" size={19} aria-hidden />
+                ) : (
+                  <HeartPulse className="text-teal-soft" size={19} aria-hidden />
+                )}
+                <div>
+                  <p className="font-medium">{contact.name}</p>
+                  <p className="text-sm text-slate-500">{contact.relationship} · {contact.phone}</p>
+                </div>
               </div>
-            </div>
-            <div className="flex gap-3 rounded-2xl bg-[#f4f8fb] p-3">
-              <HeartPulse className="text-teal-soft" size={19} aria-hidden />
-              <div>
-                <p className="font-medium">Dr. Lena Ortiz</p>
-                <p className="text-sm text-slate-500">Primary doctor · (555) 010-2200</p>
-              </div>
-            </div>
+            ))}
           </div>
         </Card>
       </div>
@@ -66,11 +69,34 @@ export default async function ChildPage({
   );
 }
 
-function Info({ label, value }: { label: string; value: string }) {
+function Info({ label, value }: { label: string; value?: string | null }) {
   return (
     <div className="rounded-2xl bg-[#f8fafc] p-3">
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</p>
-      <p className="mt-1 font-medium">{value}</p>
+      <p className="mt-1 font-medium">{value ?? "None documented"}</p>
     </div>
   );
+}
+
+type EmergencyContact = {
+  name: string;
+  relationship: string;
+  phone: string;
+};
+
+function parseEmergencyContacts(value: unknown): EmergencyContact[] {
+  if (!Array.isArray(value)) return [];
+
+  return value.filter((contact): contact is EmergencyContact => {
+    return (
+      typeof contact === "object" &&
+      contact !== null &&
+      "name" in contact &&
+      "relationship" in contact &&
+      "phone" in contact &&
+      typeof contact.name === "string" &&
+      typeof contact.relationship === "string" &&
+      typeof contact.phone === "string"
+    );
+  });
 }

@@ -11,15 +11,21 @@ import {
   useReactTable
 } from "@tanstack/react-table";
 import { ArrowUpDown, Download, Search } from "lucide-react";
-import { records } from "@/lib/demo-data";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
-type RecordRow = (typeof records)[number];
+type RecordRow = {
+  id: string;
+  category: string;
+  patient: string;
+  title: string;
+  date: string;
+  status: string;
+};
 
 const tabs = ["Medication", "Doctor Visit", "Bloodwork", "Document", "Activity"] as const;
 
-export function RecordsTable() {
+export function RecordsTable({ records }: { records: RecordRow[] }) {
   const [activeTab, setActiveTab] = useState<(typeof tabs)[number]>("Medication");
   const [globalFilter, setGlobalFilter] = useState("");
   const [sorting, setSorting] = useState<SortingState>([{ id: "date", desc: true }]);
@@ -27,7 +33,7 @@ export function RecordsTable() {
   const data = useMemo(() => {
     if (activeTab === "Activity") return records;
     return records.filter((record) => record.category === activeTab);
-  }, [activeTab]);
+  }, [activeTab, records]);
 
   const table = useReactTable({
     data,
