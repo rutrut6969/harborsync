@@ -15,11 +15,15 @@ export default async function ProtectedLayout({
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { passwordHash: true, onboardingCompleted: true }
+    select: { passwordHash: true, onboardingCompleted: true, platformRole: true }
   });
 
   if (!user?.passwordHash) {
     redirect("/set-password");
+  }
+
+  if (user.platformRole === "SUPER_ADMIN" || user.platformRole === "PLATFORM_ADMIN") {
+    redirect("/admin");
   }
 
   if (!user.onboardingCompleted) {

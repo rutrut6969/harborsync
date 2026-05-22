@@ -17,11 +17,12 @@ export async function createMedicationLog(input: unknown) {
   if (!session?.user?.id) throw new Error("Unauthorized");
 
   const data = medicationLogSchema.parse(input);
-  if (!(await canWriteChildRecord(session.user.id, data.childId))) throw new Error("You do not have permission to add logs for this child.");
+  const patient = await resolvePatient(session.user.id, data.childId);
 
   const log = await prisma.medicationLog.create({
     data: {
-      childId: data.childId,
+      childId: patient.childId,
+      patientUserId: patient.patientUserId,
       medicationName: data.medicationName,
       dosage: data.dosage,
       doseUnit: data.doseUnit,
@@ -38,7 +39,7 @@ export async function createMedicationLog(input: unknown) {
   await writeAuditLog({
     actorId: session.user.id,
     action: "LOG_CREATED",
-    childId: data.childId,
+    childId: patient.childId,
     message: `Medication logged: ${data.medicationName}`
   });
 
@@ -52,13 +53,16 @@ export async function createBulkMedicationLog(input: unknown) {
 
   const data = bulkMedicationSchema.parse(input);
   for (const entry of data.entries) {
-    if (!(await canWriteChildRecord(session.user.id, entry.childId))) throw new Error("You do not have permission to add logs for this child.");
+    await resolvePatient(session.user.id, entry.childId);
   }
   const batchId = crypto.randomUUID();
 
   const logs = await prisma.medicationLog.createMany({
-    data: data.entries.map((entry) => ({
-      childId: entry.childId,
+    data: await Promise.all(data.entries.map(async (entry) => {
+      const patient = await resolvePatient(session.user.id, entry.childId);
+      return {
+      childId: patient.childId,
+      patientUserId: patient.patientUserId,
       medicationName: entry.medicationName,
       dosage: entry.dosage,
       doseUnit: entry.doseUnit,
@@ -71,6 +75,7 @@ export async function createBulkMedicationLog(input: unknown) {
       sideEffects: entry.sideEffects,
       batchId,
       entryMethod: "bulk"
+    };
     }))
   });
 
@@ -90,11 +95,12 @@ export async function createDoctorVisitLog(input: unknown) {
   if (!session?.user?.id) throw new Error("Unauthorized");
 
   const data = doctorVisitSchema.parse(input);
-  if (!(await canWriteChildRecord(session.user.id, data.childId))) throw new Error("You do not have permission to add logs for this child.");
+  const patient = await resolvePatient(session.user.id, data.childId);
 
   const log = await prisma.doctorVisitLog.create({
     data: {
-      childId: data.childId,
+      childId: patient.childId,
+      patientUserId: patient.patientUserId,
       appointmentDate: new Date(data.appointmentDate),
       appointmentTime: data.appointmentTime,
       doctorName: data.doctorName,
@@ -110,7 +116,7 @@ export async function createDoctorVisitLog(input: unknown) {
   await writeAuditLog({
     actorId: session.user.id,
     action: "LOG_CREATED",
-    childId: data.childId,
+    childId: patient.childId,
     message: `Doctor visit logged: ${data.reasonForVisit}`
   });
 
@@ -123,11 +129,12 @@ export async function createBloodworkLog(input: unknown) {
   if (!session?.user?.id) throw new Error("Unauthorized");
 
   const data = bloodworkSchema.parse(input);
-  if (!(await canWriteChildRecord(session.user.id, data.childId))) throw new Error("You do not have permission to add logs for this child.");
+  const patient = await resolvePatient(session.user.id, data.childId);
 
   const log = await prisma.bloodworkLog.create({
     data: {
-      childId: data.childId,
+      childId: patient.childId,
+      patientUserId: patient.patientUserId,
       bloodworkDate: new Date(data.bloodworkDate),
       facility: data.facility,
       orderingDoctor: data.orderingDoctor,
@@ -144,12 +151,22 @@ export async function createBloodworkLog(input: unknown) {
   await writeAuditLog({
     actorId: session.user.id,
     action: "LOG_CREATED",
-    childId: data.childId,
+    childId: patient.childId,
     message: `Bloodwork logged${data.facility ? ` from ${data.facility}` : ""}`
   });
 
   revalidateCarePages();
   return log;
+}
+
+async function resolvePatient(userId: string, subjectId: string) {
+  if (subjectId === `user:${userId}` || subjectId === userId) {
+    return { childId: undefined, patientUserId: userId };
+  }
+
+  const childId = subjectId.startsWith("child:") ? subjectId.slice("child:".length) : subjectId;
+  if (!(await canWriteChildRecord(userId, childId))) throw new Error("You do not have permission to add logs for this patient.");
+  return { childId, patientUserId: undefined };
 }
 
 function revalidateCarePages() {

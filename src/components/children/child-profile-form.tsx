@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { AddressAutocompleteInput } from "@/components/ui/address-autocomplete-input";
 
 type FamilyOption = {
   id: string;
@@ -68,9 +69,7 @@ export function ChildProfileForm({ action, child, families = [], submitLabel }: 
         </Label>
       </div>
 
-      <Label title="Street address">
-        <input name="streetAddress" defaultValue={child?.streetAddress ?? ""} placeholder="Address if different or needed" className={fieldClass} />
-      </Label>
+      <AddressAutocompleteInput defaultStreet={child?.streetAddress} />
 
       <div className="grid gap-3 sm:grid-cols-2">
         <Label title="Allergies">
@@ -88,6 +87,30 @@ export function ChildProfileForm({ action, child, families = [], submitLabel }: 
       </div>
 
       <div className="rounded-2xl border border-border bg-[#f8fafc] p-4">
+        <p className="font-semibold">Additional Parent / Guardian</p>
+        <p className="mt-1 text-sm text-slate-500">Invite or link another guardian without automatically merging households.</p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <Label title="Name">
+            <input name="additionalGuardianName" className={fieldClass} />
+          </Label>
+          <Label title="Email">
+            <input name="additionalGuardianEmail" type="email" className={fieldClass} />
+          </Label>
+        </div>
+        <fieldset className="mt-3 space-y-2">
+          <legend className="text-sm font-semibold text-slate-700">Should this adult be added to your family group?</legend>
+          <label className="flex min-h-11 items-center gap-3 rounded-2xl bg-white px-3 text-sm font-medium text-slate-600">
+            <input type="radio" name="additionalGuardianFamilyMode" value="join" defaultChecked className="size-4 accent-harbor" />
+            Yes, add to my family group
+          </label>
+          <label className="flex min-h-11 items-center gap-3 rounded-2xl bg-white px-3 text-sm font-medium text-slate-600">
+            <input type="radio" name="additionalGuardianFamilyMode" value="separate" className="size-4 accent-harbor" />
+            No, create separate family group for them
+          </label>
+        </fieldset>
+      </div>
+
+      <div className="rounded-2xl border border-border bg-[#f8fafc] p-4">
         <p className="font-semibold">Emergency Contact</p>
         <div className="mt-3 grid gap-3 sm:grid-cols-3">
           <Label title="Name">
@@ -99,6 +122,16 @@ export function ChildProfileForm({ action, child, families = [], submitLabel }: 
           <Label title="Phone">
             <input name="emergencyContactPhone" type="tel" defaultValue={emergencyContact?.phone ?? ""} className={fieldClass} />
           </Label>
+          <Label title="Email">
+            <input name="emergencyContactEmail" type="email" className={fieldClass} />
+          </Label>
+          <Label title="Notes">
+            <input name="emergencyContactNotes" className={fieldClass} />
+          </Label>
+          <label className="flex min-h-11 items-center gap-3 rounded-2xl bg-white px-3 text-sm font-medium text-slate-600">
+            <input type="checkbox" name="emergencyContactPortalAccess" className="size-4 accent-harbor" />
+            Portal access
+          </label>
         </div>
       </div>
 

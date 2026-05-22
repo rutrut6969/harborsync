@@ -166,6 +166,40 @@ export async function acceptInvite(formData: FormData) {
     });
   }
 
+  const pendingRelationships = await prisma.childRelationship.findMany({
+    where: {
+      invitedEmail: invite.email,
+      status: { in: ["INVITED", "PENDING_APPROVAL"] }
+    }
+  });
+
+  for (const relationship of pendingRelationships) {
+    let familyGroupId = relationship.familyGroupId;
+    if (!familyGroupId && relationship.relationshipType === "PARENT_GUARDIAN") {
+      const family = await prisma.familyGroup.create({
+        data: {
+          name: `${name || user.name || "Guardian"} Family`,
+          description: "Separate family group created from guardian invite",
+          memberships: { create: { userId: user.id, role: relationship.role } },
+          children: { create: { childId: relationship.childId, relationship: "Child" } }
+        }
+      });
+      familyGroupId = family.id;
+    }
+
+    await prisma.childRelationship.update({
+      where: { id: relationship.id },
+      data: {
+        userId: user.id,
+        invitedEmail: null,
+        status: "ACTIVE",
+        familyGroupId,
+        approvedById: invite.senderId
+      }
+    });
+    await grantChildPermission(relationship.childId, user.id, relationship.role, relationship.caseId);
+  }
+
   await prisma.invitation.update({
     where: { id: invite.id },
     data: { status: "ACCEPTED", recipientId: user.id }
@@ -173,7 +207,7 @@ export async function acceptInvite(formData: FormData) {
 
   await writeAuditLog({
     actorId: user.id,
-    action: "ACCESS_CHANGED",
+    action: "INVITATION_ACCEPTED",
     caseId: invite.caseId ?? undefined,
     message: `${invite.email} accepted invitation as ${invite.role}`
   });

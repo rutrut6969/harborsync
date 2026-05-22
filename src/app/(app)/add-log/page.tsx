@@ -22,10 +22,18 @@ async function AddLogPageContent({
   return (
     <AddLogForm
       initialType={params.type}
-      childOptions={children.map((child) => ({
-        id: child.id,
-        name: child.fullName
-      }))}
+      childOptions={[
+        ...(session?.user?.id
+          ? [{
+              id: `user:${session.user.id}`,
+              name: `${session.user.name ?? session.user.email ?? "Me"} - Self`
+            }]
+          : []),
+        ...children.map((child) => ({
+          id: `child:${child.id}`,
+          name: `${child.fullName} - Child`
+        }))
+      ]}
     />
   );
 }

@@ -49,6 +49,51 @@ export async function completeOnboarding(formData: FormData) {
     message: "User completed onboarding profile"
   });
 
+  const familyGroupName = optional(formData.get("familyGroupName"));
+  const firstChildName = optional(formData.get("firstChildName"));
+  const firstChildDob = optional(formData.get("firstChildDob"));
+  if (familyGroupName || (firstChildName && firstChildDob)) {
+    const existingMembership = await prisma.familyMembership.findFirst({ where: { userId: session.user.id, role: "FAMILY_ADMIN" } });
+    const family = existingMembership
+      ? await prisma.familyGroup.findUnique({ where: { id: existingMembership.familyGroupId } })
+      : await prisma.familyGroup.create({
+          data: {
+            name: familyGroupName ?? "My Family",
+            description: "Created during onboarding",
+            memberships: { create: { userId: session.user.id, role: "FAMILY_ADMIN" } }
+          }
+        });
+
+    if (!existingMembership && family) {
+      await writeAuditLog({ actorId: session.user.id, action: "FAMILY_CREATED", message: `Family group created: ${family.name}` });
+    }
+
+    if (family && firstChildName && firstChildDob) {
+      const child = await prisma.childProfile.create({
+        data: {
+          fullName: firstChildName,
+          dateOfBirth: new Date(firstChildDob)
+        }
+      });
+      await prisma.familyChild.create({ data: { familyGroupId: family.id, childId: child.id, relationship: "Child" } });
+      await prisma.childPermission.create({ data: { childId: child.id, userId: session.user.id, role: "FAMILY_ADMIN" } });
+      await prisma.childRelationship.create({
+        data: {
+          childId: child.id,
+          userId: session.user.id,
+          fullName: String(formData.get("name") ?? "").trim(),
+          relationshipType: "PARENT_GUARDIAN",
+          role: "FAMILY_ADMIN",
+          familyGroupId: family.id,
+          status: "ACTIVE",
+          requestedById: session.user.id,
+          approvedById: session.user.id
+        }
+      });
+      await writeAuditLog({ actorId: session.user.id, action: "CHILD_CREATED", childId: child.id, message: `Child profile created from onboarding: ${child.fullName}` });
+    }
+  }
+
   if (caseworkerEmail) {
     const token = randomBytes(32).toString("hex");
     await prisma.invitation.create({

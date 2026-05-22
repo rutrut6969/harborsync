@@ -15,7 +15,7 @@ export async function signInWithPassword(formData: FormData) {
   const user = email
     ? await prisma.user.findUnique({
         where: { email },
-        select: { id: true, passwordHash: true, authorizedEmail: { select: { status: true } } }
+        select: { id: true, passwordHash: true, platformRole: true, authorizedEmail: { select: { status: true } } }
       })
     : null;
 
@@ -26,6 +26,7 @@ export async function signInWithPassword(formData: FormData) {
   }
 
   await createDatabaseSession(user.id);
+  if (user.platformRole === "SUPER_ADMIN" || user.platformRole === "PLATFORM_ADMIN") redirect("/admin");
   redirect("/");
 }
 

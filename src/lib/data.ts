@@ -44,20 +44,20 @@ export async function getDashboardData(userId: string) {
 
   const [medicationLogs, bloodworkLogs, doctorVisits, auditLogs] = await Promise.all([
     prisma.medicationLog.findMany({
-      where: { childId: { in: childIds } },
-      include: { child: true },
+      where: { OR: [{ childId: { in: childIds } }, { patientUserId: userId }] },
+      include: { child: true, patientUser: true },
       orderBy: { createdAt: "desc" },
       take: 5
     }),
     prisma.bloodworkLog.findMany({
-      where: { childId: { in: childIds } },
-      include: { child: true },
+      where: { OR: [{ childId: { in: childIds } }, { patientUserId: userId }] },
+      include: { child: true, patientUser: true },
       orderBy: { createdAt: "desc" },
       take: 5
     }),
     prisma.doctorVisitLog.findMany({
-      where: { childId: { in: childIds } },
-      include: { child: true },
+      where: { OR: [{ childId: { in: childIds } }, { patientUserId: userId }] },
+      include: { child: true, patientUser: true },
       orderBy: { createdAt: "desc" },
       take: 5
     }),
@@ -71,21 +71,21 @@ export async function getDashboardData(userId: string) {
   const recentLogs = [
     ...medicationLogs.map((log) => ({
       type: "Medication",
-      child: log.child.fullName,
+      child: subjectName(log),
       title: `${log.medicationName} ${log.dosage.toString()}${log.doseUnit}`,
       meta: `${toTitle(log.status)} at ${log.timeGiven} by ${log.administeredByName ?? "care team"}`,
       createdAt: log.createdAt
     })),
     ...bloodworkLogs.map((log) => ({
       type: "Bloodwork",
-      child: log.child.fullName,
+      child: subjectName(log),
       title: log.plateletCount ? `Platelets ${log.plateletCount.toString()}` : "Bloodwork logged",
       meta: log.facility ? `Uploaded from ${log.facility}` : "Lab results added",
       createdAt: log.createdAt
     })),
     ...doctorVisits.map((log) => ({
       type: "Doctor Visit",
-      child: log.child.fullName,
+      child: subjectName(log),
       title: log.diagnosisOutcome ?? log.reasonForVisit,
       meta: log.followUpRequired ? "Follow-up required" : "Follow-up not required",
       createdAt: log.createdAt
@@ -100,14 +100,14 @@ export async function getDashboardData(userId: string) {
       .map((log) => ({
         title: "Bloodwork follow-up",
         date: "Soon",
-        detail: `${log.child.fullName}${log.facility ? ` · ${log.facility}` : ""}`
+        detail: `${subjectName(log)}${log.facility ? ` - ${log.facility}` : ""}`
       })),
     ...doctorVisits
       .filter((log) => log.followUpRequired && log.followUpDate)
       .map((log) => ({
         title: "Doctor follow-up",
         date: log.followUpDate ? format(log.followUpDate, "MMM d") : "Soon",
-        detail: `${log.child.fullName} · ${log.doctorName}`
+        detail: `${subjectName(log)} - ${log.doctorName}`
       }))
   ].slice(0, 4);
 
@@ -125,23 +125,23 @@ export async function getRecords(userId: string) {
 
   const [medication, bloodwork, visits, documents, activity] = await Promise.all([
     prisma.medicationLog.findMany({
-      where: { childId: { in: childIds } },
-      include: { child: true },
+      where: { OR: [{ childId: { in: childIds } }, { patientUserId: userId }] },
+      include: { child: true, patientUser: true },
       orderBy: { createdAt: "desc" }
     }),
     prisma.bloodworkLog.findMany({
-      where: { childId: { in: childIds } },
-      include: { child: true },
+      where: { OR: [{ childId: { in: childIds } }, { patientUserId: userId }] },
+      include: { child: true, patientUser: true },
       orderBy: { createdAt: "desc" }
     }),
     prisma.doctorVisitLog.findMany({
-      where: { childId: { in: childIds } },
-      include: { child: true },
+      where: { OR: [{ childId: { in: childIds } }, { patientUserId: userId }] },
+      include: { child: true, patientUser: true },
       orderBy: { createdAt: "desc" }
     }),
     prisma.document.findMany({
-      where: { childId: { in: childIds } },
-      include: { child: true },
+      where: { OR: [{ childId: { in: childIds } }, { patientUserId: userId }] },
+      include: { child: true, patientUser: true },
       orderBy: { createdAt: "desc" }
     }),
     prisma.auditLog.findMany({
@@ -154,7 +154,7 @@ export async function getRecords(userId: string) {
     ...medication.map((item) => ({
       id: item.id,
       category: "Medication",
-      patient: item.child.fullName,
+      patient: subjectName(item),
       title: item.medicationName,
       date: format(item.createdAt, "yyyy-MM-dd"),
       status: toTitle(item.status)
@@ -162,7 +162,7 @@ export async function getRecords(userId: string) {
     ...bloodwork.map((item) => ({
       id: item.id,
       category: "Bloodwork",
-      patient: item.child.fullName,
+      patient: subjectName(item),
       title: item.labReason ?? "Bloodwork",
       date: format(item.bloodworkDate, "yyyy-MM-dd"),
       status: item.followUpRequired ? "Follow-up" : "Complete"
@@ -170,7 +170,7 @@ export async function getRecords(userId: string) {
     ...visits.map((item) => ({
       id: item.id,
       category: "Doctor Visit",
-      patient: item.child.fullName,
+      patient: subjectName(item),
       title: item.reasonForVisit,
       date: format(item.appointmentDate, "yyyy-MM-dd"),
       status: item.followUpRequired ? "Follow-up" : "Complete"
@@ -289,14 +289,14 @@ export async function getProfileData(userId: string) {
       orderBy: { createdAt: "desc" }
     }),
     prisma.medicationLog.findMany({
-      where: { childId: { in: childIds } },
-      include: { child: true },
+      where: { OR: [{ childId: { in: childIds } }, { patientUserId: userId }] },
+      include: { child: true, patientUser: true },
       orderBy: { createdAt: "desc" },
       take: 6
     }),
     prisma.bloodworkLog.findMany({
-      where: { childId: { in: childIds } },
-      include: { child: true },
+      where: { OR: [{ childId: { in: childIds } }, { patientUserId: userId }] },
+      include: { child: true, patientUser: true },
       orderBy: { createdAt: "desc" },
       take: 6
     }),
@@ -362,7 +362,7 @@ export async function getProfileData(userId: string) {
       title: `${log.medicationName} logged`,
       description: `${toTitle(log.status)} at ${log.timeGiven}${log.administeredByName ? ` by ${log.administeredByName}` : ""}`,
       timestamp: format(log.createdAt, "MMM d, h:mm a"),
-      related: log.child.fullName,
+      related: subjectName(log),
       status: toTitle(log.status)
     })),
     ...bloodworkLogs.map((log) => ({
@@ -371,7 +371,7 @@ export async function getProfileData(userId: string) {
       title: log.labReason ?? "Bloodwork added",
       description: log.facility ? `Lab result from ${log.facility}` : "Lab result recorded",
       timestamp: format(log.createdAt, "MMM d, h:mm a"),
-      related: log.child.fullName,
+      related: subjectName(log),
       status: log.followUpRequired ? "Follow-up" : "Complete"
     })),
     ...doctorVisits.map((log) => ({
@@ -380,7 +380,7 @@ export async function getProfileData(userId: string) {
       title: log.reasonForVisit,
       description: `${log.doctorName}${log.specialty ? ` - ${log.specialty}` : ""}`,
       timestamp: format(log.createdAt, "MMM d, h:mm a"),
-      related: log.child.fullName,
+      related: subjectName(log),
       status: log.followUpRequired ? "Follow-up" : "Complete"
     })),
     ...documents.map((document) => ({
@@ -405,6 +405,7 @@ export async function getProfileData(userId: string) {
 
   const childActivity = new Map<string, Date>();
   for (const update of [...medicationLogs, ...bloodworkLogs, ...doctorVisits]) {
+    if (!update.childId) continue;
     const current = childActivity.get(update.childId);
     if (!current || update.createdAt > current) childActivity.set(update.childId, update.createdAt);
   }
@@ -431,4 +432,8 @@ function toTitle(value: string) {
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+function subjectName(item: { child?: { fullName: string } | null; patientUser?: { name: string | null; email: string } | null }) {
+  return item.child?.fullName ?? item.patientUser?.name ?? item.patientUser?.email ?? "Patient";
 }

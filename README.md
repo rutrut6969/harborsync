@@ -201,12 +201,12 @@ The activity system is designed to answer who did what, when, and in relation to
 
 HarborSync now includes a platform admin role separate from family and case roles. Platform admins can access `/admin` to review applications, manage authorized emails, approve or deny access, monitor families, children, cases, organizations, invite activity, and recent audit logs.
 
-Primary seeded platform admin:
+Primary seeded super admin:
 
 - Email: `isaac.rutledgev@obsidian-systems.tech`
 - Local/demo password: `HarborSyncTest123!`
 
-Platform admin access is intentionally separate from `FAMILY_ADMIN`. A family admin manages their own family context, while a platform admin manages system-level access and approvals.
+Super/platform admin access is intentionally separate from `FAMILY_ADMIN`. A family admin manages their own family context, while the super admin manages system-level access and approvals. The Isaac admin account is not attached to seeded family groups, child permissions, or demo cases by default.
 
 ### Authorized Email Access
 
@@ -412,7 +412,7 @@ Local/demo seeding creates these safe fake users for testing only:
 
 | Role | Email | Password |
 | --- | --- | --- |
-| Platform admin | `isaac.rutledgev@obsidian-systems.tech` | `HarborSyncTest123!` |
+| Super admin | `isaac.rutledgev@obsidian-systems.tech` | `HarborSyncTest123!` |
 | Parent / family admin | `jane.parent@harborsync.test` | `HarborSyncTest123!` |
 | Parent / family member | `sam.parent@harborsync.test` | `HarborSyncTest123!` |
 | Caseworker | `caseworker.demo@harborsync.test` | `HarborSyncTest123!` |

@@ -14,26 +14,29 @@ async function main() {
     }
   });
 
-  const adminUsers = await Promise.all(
-    ["isaac.rutledgev@obsidian-systems.tech"].map((email) =>
-      prisma.user.upsert({
-        where: { email },
-        update: {
-          name: "Isaac Rutledge",
-          platformRole: "PLATFORM_ADMIN",
-          onboardingCompleted: true
-        },
-        create: {
-          email,
-          name: "Isaac Rutledge",
-          platformRole: "PLATFORM_ADMIN",
-          onboardingCompleted: true,
-          passwordHash: testPassword,
-          passwordSetAt: new Date()
-        }
-      })
-    )
-  );
+  const superAdmin = await prisma.user.upsert({
+    where: { email: "isaac.rutledgev@obsidian-systems.tech" },
+    update: {
+      name: "Isaac Rutledge",
+      platformRole: "SUPER_ADMIN",
+      onboardingCompleted: true,
+      passwordHash: testPassword,
+      passwordSetAt: new Date()
+    },
+    create: {
+      email: "isaac.rutledgev@obsidian-systems.tech",
+      name: "Isaac Rutledge",
+      platformRole: "SUPER_ADMIN",
+      onboardingCompleted: true,
+      passwordHash: testPassword,
+      passwordSetAt: new Date()
+    }
+  });
+
+  await prisma.familyMembership.deleteMany({ where: { userId: superAdmin.id } });
+  await prisma.childPermission.deleteMany({ where: { userId: superAdmin.id } });
+  await prisma.caseParticipant.deleteMany({ where: { userId: superAdmin.id } });
+  await prisma.childRelationship.deleteMany({ where: { userId: superAdmin.id } });
 
   await prisma.authorizedEmail.upsert({
     where: { email: "rutledgeisaac6969@gmail.com" },
@@ -66,7 +69,7 @@ async function main() {
   });
 
   for (const seededUser of [
-    { user: adminUsers[0], role: "FAMILY_ADMIN", accountType: "FAMILY" },
+    { user: superAdmin, role: "FAMILY_ADMIN", accountType: "FAMILY" },
     { user: janeParent, role: "FAMILY_ADMIN", accountType: "FAMILY" },
     { user: samParent, role: "FAMILY_MEMBER", accountType: "FAMILY" },
     { user: caseworkerUser, role: "CPS_CASEWORKER", accountType: "CASEWORKER" },
@@ -91,8 +94,7 @@ async function main() {
 
   for (const member of [
     { userId: user.id, role: "FAMILY_ADMIN" },
-    { userId: janeParent.id, role: "FAMILY_ADMIN" },
-    { userId: samParent.id, role: "FAMILY_MEMBER" }
+    { userId: janeParent.id, role: "FAMILY_ADMIN" }
   ]) {
     await prisma.familyMembership.upsert({
       where: { familyGroupId_userId: { familyGroupId: family.id, userId: member.userId } },
@@ -101,22 +103,21 @@ async function main() {
     });
   }
 
-  for (const adminUser of adminUsers) {
-    await prisma.familyMembership.upsert({
-      where: {
-        familyGroupId_userId: {
-          familyGroupId: family.id,
-          userId: adminUser.id
-        }
-      },
-      update: { role: "FAMILY_ADMIN" },
-      create: {
-        familyGroupId: family.id,
-        userId: adminUser.id,
-        role: "FAMILY_ADMIN"
-      }
-    });
-  }
+  const samFamily = await prisma.familyGroup.upsert({
+    where: { id: "demo-family-sam-parker" },
+    update: {},
+    create: {
+      id: "demo-family-sam-parker",
+      name: "Sam Parker Household",
+      description: "Separate parent household sharing child access"
+    }
+  });
+
+  await prisma.familyMembership.upsert({
+    where: { familyGroupId_userId: { familyGroupId: samFamily.id, userId: samParent.id } },
+    update: { role: "FAMILY_ADMIN" },
+    create: { familyGroupId: samFamily.id, userId: samParent.id, role: "FAMILY_ADMIN" }
+  });
 
   const avery = await prisma.childProfile.upsert({
     where: { id: "demo-child-avery" },
@@ -169,6 +170,23 @@ async function main() {
       }
     });
 
+    if (child.id === avery.id) {
+      await prisma.familyChild.upsert({
+        where: {
+          familyGroupId_childId: {
+            familyGroupId: samFamily.id,
+            childId: child.id
+          }
+        },
+        update: {},
+        create: {
+          familyGroupId: samFamily.id,
+          childId: child.id,
+          relationship: "Parent"
+        }
+      });
+    }
+
     await prisma.childPermission.create({
       data: {
         childId: child.id,
@@ -177,7 +195,7 @@ async function main() {
       }
     }).catch(() => undefined);
 
-    for (const adminUser of [...adminUsers, janeParent, samParent]) {
+    for (const adminUser of [janeParent, samParent]) {
       await prisma.childPermission.create({
         data: {
           childId: child.id,
@@ -225,23 +243,6 @@ async function main() {
     }
   });
 
-  for (const adminUser of adminUsers) {
-    await prisma.caseParticipant.upsert({
-      where: {
-        caseId_userId: {
-          caseId: careCase.id,
-          userId: adminUser.id
-        }
-      },
-      update: { role: "FAMILY_ADMIN" },
-      create: {
-        caseId: careCase.id,
-        userId: adminUser.id,
-        role: "FAMILY_ADMIN"
-      }
-    });
-  }
-
   for (const participant of [
     { userId: janeParent.id, role: "FAMILY_ADMIN" },
     { userId: samParent.id, role: "FAMILY_MEMBER" },
@@ -255,6 +256,84 @@ async function main() {
     });
     await prisma.childPermission.create({ data: { childId: avery.id, userId: participant.userId, role: participant.role, caseId: careCase.id } }).catch(() => undefined);
   }
+
+  await prisma.childRelationship.deleteMany({
+    where: { childId: { in: [avery.id, miles.id] } }
+  });
+
+  await prisma.childRelationship.createMany({
+    data: [
+      {
+        childId: avery.id,
+        userId: janeParent.id,
+        fullName: "Jane Parker",
+        relationshipType: "PARENT_GUARDIAN",
+        role: "FAMILY_ADMIN",
+        familyGroupId: family.id,
+        status: "ACTIVE",
+        requestedById: janeParent.id,
+        approvedById: janeParent.id
+      },
+      {
+        childId: avery.id,
+        userId: samParent.id,
+        fullName: "Sam Parker",
+        relationshipType: "PARENT_GUARDIAN",
+        role: "FAMILY_ADMIN",
+        familyGroupId: samFamily.id,
+        status: "ACTIVE",
+        requestedById: janeParent.id,
+        approvedById: janeParent.id
+      },
+      {
+        childId: avery.id,
+        userId: caseworkerUser.id,
+        fullName: "Casey Walker",
+        relationshipType: "CPS_CASEWORKER",
+        role: "CPS_CASEWORKER",
+        caseId: careCase.id,
+        organizationId: organization.id,
+        status: "ACTIVE",
+        requestedById: janeParent.id,
+        approvedById: janeParent.id
+      },
+      {
+        childId: avery.id,
+        userId: advocateUser.id,
+        fullName: "Ava Advocate",
+        relationshipType: "ADVOCATE",
+        role: "ADVOCATE",
+        caseId: careCase.id,
+        organizationId: organization.id,
+        status: "ACTIVE",
+        requestedById: janeParent.id,
+        approvedById: janeParent.id
+      },
+      {
+        childId: avery.id,
+        invitedEmail: "aunt.maria@example.test",
+        fullName: "Maria Lopez",
+        relationshipType: "EMERGENCY_CONTACT",
+        role: "READ_ONLY",
+        familyGroupId: family.id,
+        status: "INVITED",
+        requestedById: janeParent.id,
+        canAccessPortal: false,
+        notes: "Contact-only emergency backup"
+      },
+      {
+        childId: miles.id,
+        userId: janeParent.id,
+        fullName: "Jane Parker",
+        relationshipType: "PARENT_GUARDIAN",
+        role: "FAMILY_ADMIN",
+        familyGroupId: family.id,
+        status: "ACTIVE",
+        requestedById: janeParent.id,
+        approvedById: janeParent.id
+      }
+    ]
+  });
 
   await prisma.medicationLog.create({
     data: {

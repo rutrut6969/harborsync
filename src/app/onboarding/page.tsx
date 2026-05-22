@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { completeOnboarding } from "@/app/actions/onboarding";
 import { Button } from "@/components/ui/button";
+import { AddressAutocompleteInput } from "@/components/ui/address-autocomplete-input";
 
 export default async function OnboardingPage() {
   const session = await auth();
@@ -34,12 +35,7 @@ export default async function OnboardingPage() {
             <Field name="relationshipToChild" label="Relationship to children" placeholder="Parent, guardian, caregiver..." />
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-[1fr_0.8fr_0.5fr_0.5fr]">
-            <Field name="streetAddress" label="Street address" />
-            <Field name="city" label="City" />
-            <Field name="state" label="State" />
-            <Field name="zip" label="ZIP" />
-          </div>
+          <AddressAutocompleteInput />
 
           <label className="space-y-1.5">
             <span className="text-sm font-semibold text-slate-700">Preferred contact method</span>
@@ -55,6 +51,17 @@ export default async function OnboardingPage() {
             <Field name="adultConditions" label="Illnesses/conditions (optional)" />
             <Field name="emergencyContactName" label="Emergency contact name" />
             <Field name="emergencyContactPhone" label="Emergency contact phone" />
+          </div>
+
+          <div className="rounded-2xl bg-[#f8fafc] p-4">
+            <p className="font-semibold">Family setup</p>
+            <p className="mt-1 text-sm text-slate-500">You can create child profiles now or request access from Settings after onboarding.</p>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <Field name="familyGroupName" label="Family group name" placeholder="The Parker Family" />
+              <Field name="firstChildName" label="First child profile (optional)" />
+              <Field name="firstChildDob" label="Child date of birth" type="date" />
+              <Field name="knownGuardianEmail" label="Known guardian email" type="email" />
+            </div>
           </div>
 
           <div className="rounded-2xl bg-[#f8fafc] p-4">

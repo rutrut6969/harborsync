@@ -18,7 +18,27 @@ enum UserRole {
 
 enum PlatformRole {
   USER
+  SUPER_ADMIN
   PLATFORM_ADMIN
+  SUPPORT_ADMIN
+}
+
+enum ChildRelationshipStatus {
+  ACTIVE
+  INVITED
+  PENDING_APPROVAL
+  DENIED
+  REVOKED
+}
+
+enum ChildRelationshipType {
+  PARENT_GUARDIAN
+  CAREGIVER
+  EMERGENCY_CONTACT
+  CPS_CASEWORKER
+  ADVOCATE
+  FOSTER_PARENT
+  READ_ONLY
 }
 
 enum AuthorizedEmailStatus {
@@ -123,6 +143,16 @@ enum AuditAction {
   CHILD_CREATED
   CHILD_UPDATED
   CHILD_ARCHIVED
+  GUARDIAN_ASSIGNED
+  GUARDIAN_REMOVED
+  CAREGIVER_ASSIGNED
+  CASEWORKER_ASSIGNED
+  EMERGENCY_CONTACT_LINKED
+  ACCESS_REQUEST_SUBMITTED
+  ACCESS_REQUEST_APPROVED
+  ACCESS_REQUEST_DENIED
+  CHILD_CONNECTED_TO_FAMILY
+  ADDRESS_UPDATED
   USER_APPROVED
   USER_DENIED
   SENSITIVE_DATA_UPDATED
@@ -167,13 +197,20 @@ model User {
   caseParticipants        CaseParticipant[]
   createdCases            Case[]                   @relation("CaseCreator")
   medicationLogs          MedicationLog[]          @relation("MedicationAdmin")
+  patientMedicationLogs   MedicationLog[]          @relation("MedicationPatient")
   doctorVisitLogs         DoctorVisitLog[]         @relation("DoctorVisitCreator")
+  patientDoctorVisitLogs  DoctorVisitLog[]         @relation("DoctorVisitPatient")
   bloodworkLogs           BloodworkLog[]           @relation("BloodworkCreator")
+  patientBloodworkLogs    BloodworkLog[]           @relation("BloodworkPatient")
   uploadedDocuments       Document[]               @relation("DocumentUploader")
+  patientDocuments        Document[]               @relation("DocumentPatient")
   auditLogs               AuditLog[]               @relation("AuditActor")
   sentInvitations         Invitation[]             @relation("InvitationSender")
   receivedInvitations     Invitation[]             @relation("InvitationRecipient")
   childPermissions        ChildPermission[]
+  childRelationships      ChildRelationship[]      @relation("ChildRelationshipUser")
+  requestedRelationships  ChildRelationship[]      @relation("ChildRelationshipRequester")
+  approvedRelationships   ChildRelationship[]      @relation("ChildRelationshipApprover")
   authorizedEmail         AuthorizedEmail?
   submittedApplications   Application[]            @relation("ApplicationSubmitter")
   reviewedApplications    Application[]            @relation("ApplicationReviewer")
@@ -225,12 +262,13 @@ model Organization {
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 
-  memberships      OrganizationMembership[]
-  sponsoredCases   Case[]
-  sponsorships     FamilySponsorship[]
-  invitations      Invitation[]
-  applications     Application[]
-  authorizedEmails AuthorizedEmail[]
+  memberships        OrganizationMembership[]
+  sponsoredCases     Case[]
+  sponsorships       FamilySponsorship[]
+  invitations        Invitation[]
+  applications       Application[]
+  authorizedEmails   AuthorizedEmail[]
+  childRelationships ChildRelationship[]
 }
 
 model OrganizationMembership {
@@ -255,10 +293,11 @@ model FamilyGroup {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  memberships  FamilyMembership[]
-  children     FamilyChild[]
-  sponsorships FamilySponsorship[]
-  invitations  Invitation[]
+  memberships        FamilyMembership[]
+  children           FamilyChild[]
+  sponsorships       FamilySponsorship[]
+  invitations        Invitation[]
+  childRelationships ChildRelationship[]
 }
 
 model FamilyMembership {
@@ -300,7 +339,41 @@ model ChildProfile {
   bloodworkLogs        BloodworkLog[]
   documents            Document[]
   permissions          ChildPermission[]
+  relationships        ChildRelationship[]
   sensitiveProfileData SensitiveProfileData?
+}
+
+model ChildRelationship {
+  id               String                  @id @default(cuid())
+  childId          String
+  userId           String?
+  invitedEmail     String?
+  fullName         String
+  relationshipType ChildRelationshipType
+  role             UserRole
+  familyGroupId    String?
+  caseId           String?
+  organizationId   String?
+  status           ChildRelationshipStatus @default(ACTIVE)
+  requestedById    String
+  approvedById     String?
+  canAccessPortal  Boolean                 @default(true)
+  notes            String?
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+
+  child        ChildProfile  @relation(fields: [childId], references: [id], onDelete: Cascade)
+  user         User?         @relation("ChildRelationshipUser", fields: [userId], references: [id], onDelete: SetNull)
+  requestedBy  User          @relation("ChildRelationshipRequester", fields: [requestedById], references: [id])
+  approvedBy   User?         @relation("ChildRelationshipApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  familyGroup  FamilyGroup?  @relation(fields: [familyGroupId], references: [id], onDelete: SetNull)
+  case         Case?         @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@index([childId, status])
+  @@index([userId, status])
+  @@index([invitedEmail, status])
+  @@index([relationshipType, status])
 }
 
 model FamilyChild {
@@ -349,6 +422,7 @@ model Case {
   documents              Document[]
   permissions            ChildPermission[]
   invitations            Invitation[]
+  childRelationships     ChildRelationship[]
 }
 
 model CaseChild {
@@ -392,7 +466,8 @@ model CaseTimelineEvent {
 
 model MedicationLog {
   id                 String     @id @default(cuid())
-  childId            String
+  childId            String?
+  patientUserId      String?
   medicationName     String
   dosage             Decimal
   doseUnit           String
@@ -408,14 +483,16 @@ model MedicationLog {
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
 
-  child          ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)
-  administeredBy User?        @relation("MedicationAdmin", fields: [administeredById], references: [id])
+  child          ChildProfile? @relation(fields: [childId], references: [id], onDelete: Cascade)
+  patientUser    User?         @relation("MedicationPatient", fields: [patientUserId], references: [id], onDelete: Cascade)
+  administeredBy User?         @relation("MedicationAdmin", fields: [administeredById], references: [id])
   documents      Document[]
 }
 
 model DoctorVisitLog {
   id               String    @id @default(cuid())
-  childId          String
+  childId          String?
+  patientUserId    String?
   appointmentDate  DateTime
   appointmentTime  String?
   doctorName       String
@@ -428,14 +505,16 @@ model DoctorVisitLog {
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
-  child     ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)
-  createdBy User?        @relation("DoctorVisitCreator", fields: [createdById], references: [id])
-  documents Document[]
+  child       ChildProfile? @relation(fields: [childId], references: [id], onDelete: Cascade)
+  patientUser User?         @relation("DoctorVisitPatient", fields: [patientUserId], references: [id], onDelete: Cascade)
+  createdBy   User?         @relation("DoctorVisitCreator", fields: [createdById], references: [id])
+  documents   Document[]
 }
 
 model BloodworkLog {
   id                  String   @id @default(cuid())
-  childId             String
+  childId             String?
+  patientUserId       String?
   bloodworkDate       DateTime
   facility            String?
   orderingDoctor      String?
@@ -449,9 +528,10 @@ model BloodworkLog {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
-  child     ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)
-  createdBy User?        @relation("BloodworkCreator", fields: [createdById], references: [id])
-  documents Document[]
+  child       ChildProfile? @relation(fields: [childId], references: [id], onDelete: Cascade)
+  patientUser User?         @relation("BloodworkPatient", fields: [patientUserId], references: [id], onDelete: Cascade)
+  createdBy   User?         @relation("BloodworkCreator", fields: [createdById], references: [id])
+  documents   Document[]
 }
 
 model Document {
@@ -463,6 +543,7 @@ model Document {
   mimeType         String
   sizeBytes        Int
   uploadedById     String
+  patientUserId    String?
   childId          String?
   caseId           String?
   medicationLogId  String?
@@ -471,6 +552,7 @@ model Document {
   createdAt        DateTime     @default(now())
 
   uploadedBy     User            @relation("DocumentUploader", fields: [uploadedById], references: [id])
+  patientUser    User?           @relation("DocumentPatient", fields: [patientUserId], references: [id], onDelete: Cascade)
   child          ChildProfile?   @relation(fields: [childId], references: [id], onDelete: Cascade)
   case           Case?           @relation(fields: [caseId], references: [id], onDelete: Cascade)
   medicationLog  MedicationLog?  @relation(fields: [medicationLogId], references: [id], onDelete: Cascade)
