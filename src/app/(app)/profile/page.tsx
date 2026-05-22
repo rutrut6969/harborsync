@@ -1,9 +1,10 @@
 import { Building2, LogOut, ShieldCheck, UsersRound } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { getProfileData } from "@/lib/data";
-import { signOutUser } from "@/app/(app)/profile/actions";
+import { signOutUser } from "@/app/actions/session";
 import { Button } from "@/components/ui/button";
 import { Card, SectionHeader } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export default async function ProfilePage() {
   const session = await auth();
@@ -64,7 +65,7 @@ export default async function ProfilePage() {
                 </div>
               ))
             ) : (
-              <p className="rounded-2xl bg-[#f8fafc] p-3 text-sm text-slate-500">No family access yet.</p>
+              <EmptyState compact icon={UsersRound} title="No family access yet" description="Invitations and shared child profiles will appear here." />
             )}
           </div>
         </Card>
@@ -92,7 +93,7 @@ export default async function ProfilePage() {
                 </div>
               ))
             ) : (
-              <p className="rounded-2xl bg-[#f8fafc] p-3 text-sm text-slate-500">No active cases yet.</p>
+              <EmptyState compact icon={ShieldCheck} title="No active cases yet" description="Case participation and assigned professionals will appear here." />
             )}
           </div>
         </Card>

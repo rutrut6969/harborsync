@@ -31,6 +31,7 @@
 
 body {
   min-height: 100vh;
+  scroll-padding-bottom: 7rem;
   background:
     radial-gradient(circle at top left, rgba(79, 167, 160, 0.11), transparent 28rem),
     var(--background);
@@ -52,4 +53,10 @@ textarea {
 
 .touch-target {
   min-height: 44px;
+}
+
+@supports (padding: max(0px)) {
+  .safe-bottom {
+    padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);
+  }
 }

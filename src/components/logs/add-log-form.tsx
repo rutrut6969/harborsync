@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import type { FieldValues, Path, UseFormRegister, UseFormRegisterReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { FileHeart, Pill, Plus, Stethoscope } from "lucide-react";
+import { ChevronDown, FileHeart, Pill, Plus, Stethoscope } from "lucide-react";
 import {
   bulkMedicationSchema,
   medicationLogSchema,
@@ -134,11 +134,13 @@ function MedicationForm({ childOptions, onNotice }: { childOptions: ChildOption[
 
 function BulkMedicationForm({ childOptions, onNotice }: { childOptions: ChildOption[]; onNotice: (notice: Notice) => void }) {
   const batchId = useMemo(() => `batch-${Date.now().toString(36)}`, []);
-  const { register, control, handleSubmit, reset, formState } = useForm<{ entries: MedicationLogInput[] }>({
+  const [openIndex, setOpenIndex] = useState(0);
+  const { register, control, handleSubmit, reset, formState, watch } = useForm<{ entries: MedicationLogInput[] }>({
     defaultValues: { entries: [defaultMedication(childOptions[0]?.id)] },
     resolver: zodResolver(bulkMedicationSchema)
   });
   const { fields, append, remove } = useFieldArray({ control, name: "entries" });
+  const watchedEntries = watch("entries");
 
   return (
     <Card>
@@ -148,6 +150,7 @@ function BulkMedicationForm({ childOptions, onNotice }: { childOptions: ChildOpt
           try {
             await createBulkMedicationLog(values);
             reset({ entries: [defaultMedication(values.entries[0]?.childId ?? childOptions[0]?.id)] });
+            setOpenIndex(0);
             onNotice({ type: "success", text: `${values.entries.length} medication entries saved to Records.` });
           } catch {
             onNotice({ type: "error", text: "Bulk medication log could not be saved. Please review each entry." });
@@ -158,19 +161,46 @@ function BulkMedicationForm({ childOptions, onNotice }: { childOptions: ChildOpt
           Batch ID: <span className="font-semibold text-slate-deep">{batchId}</span> - Entry method: bulk
         </div>
         {fields.map((field, index) => (
-          <div key={field.id} className="rounded-2xl border border-slate-100 p-3">
-            <div className="mb-3 flex items-center justify-between">
-              <p className="font-semibold">Entry {index + 1}</p>
+          <div key={field.id} className="overflow-hidden rounded-2xl border border-slate-100">
+            <button
+              type="button"
+              onClick={() => setOpenIndex(openIndex === index ? -1 : index)}
+              className="touch-target flex w-full items-center justify-between gap-3 bg-[#f8fafc] px-3 py-3 text-left"
+            >
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Entry {index + 1}</p>
+                <p className="mt-1 font-semibold text-slate-deep">{entrySummary(watchedEntries?.[index], childOptions)}</p>
+              </div>
+              <ChevronDown className={cn("shrink-0 text-slate-400 transition", openIndex === index && "rotate-180")} size={18} aria-hidden />
+            </button>
+            {openIndex === index ? (
+              <div className="space-y-3 p-3">
               {fields.length > 1 ? (
-                <button type="button" className="text-sm font-semibold text-error-muted" onClick={() => remove(index)}>
+                <button
+                  type="button"
+                  className="text-sm font-semibold text-error-muted"
+                  onClick={() => {
+                    remove(index);
+                    setOpenIndex(Math.max(0, index - 1));
+                  }}
+                >
                   Remove
                 </button>
               ) : null}
-            </div>
-            <MedicationFields childOptions={childOptions} prefix={`entries.${index}.`} register={register} />
+                <MedicationFields childOptions={childOptions} prefix={`entries.${index}.`} register={register} />
+              </div>
+            ) : null}
           </div>
         ))}
-        <Button type="button" variant="secondary" className="w-full" onClick={() => append(defaultMedication(childOptions[0]?.id))}>
+        <Button
+          type="button"
+          variant="secondary"
+          className="w-full"
+          onClick={() => {
+            append(defaultMedication(childOptions[0]?.id));
+            setOpenIndex(fields.length);
+          }}
+        >
           <Plus size={18} aria-hidden />
           Add Entry
         </Button>
@@ -180,6 +210,13 @@ function BulkMedicationForm({ childOptions, onNotice }: { childOptions: ChildOpt
       </form>
     </Card>
   );
+}
+
+function entrySummary(entry: MedicationLogInput | undefined, childOptions: ChildOption[]) {
+  const childName = childOptions.find((child) => child.id === entry?.childId)?.name ?? "Choose patient";
+  const medication = entry?.medicationName || "Medication";
+  const time = entry?.timeGiven || "Time";
+  return `${medication} - ${childName} - ${time}`;
 }
 
 function DoctorVisitForm({ childOptions, onNotice }: { childOptions: ChildOption[]; onNotice: (notice: Notice) => void }) {

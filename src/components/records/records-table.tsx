@@ -10,9 +10,10 @@ import {
   type SortingState,
   useReactTable
 } from "@tanstack/react-table";
-import { ArrowUpDown, Download, Search } from "lucide-react";
+import { ArrowUpDown, Download, FolderSearch, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 
 type RecordRow = {
   id: string;
@@ -80,8 +81,25 @@ export function RecordsTable({ records }: { records: RecordRow[] }) {
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[44rem] text-left text-sm">
+      <div className="space-y-3 p-4 md:hidden">
+        {table.getRowModel().rows.length ? (
+          table.getRowModel().rows.map((row) => {
+            const record = row.original;
+            return <RecordCard key={record.id} record={record} />;
+          })
+        ) : (
+          <EmptyState
+            compact
+            icon={FolderSearch}
+            title="No records found"
+            description="Try a different tab or search term."
+            className="border-slate-100"
+          />
+        )}
+      </div>
+
+      <div className="hidden overflow-x-auto md:block">
+        <table className="w-full text-left text-sm">
           <thead className="bg-[#f8fafc] text-xs uppercase tracking-wide text-slate-500">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
@@ -94,15 +112,29 @@ export function RecordsTable({ records }: { records: RecordRow[] }) {
             ))}
           </thead>
           <tbody>
-            {table.getRowModel().rows.map((row) => (
-              <tr key={row.id} className="border-t border-slate-100">
-                {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className="px-4 py-3">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
-                ))}
+            {table.getRowModel().rows.length ? (
+              table.getRowModel().rows.map((row) => (
+                <tr key={row.id} className="border-t border-slate-100">
+                  {row.getVisibleCells().map((cell) => (
+                    <td key={cell.id} className="px-4 py-3">
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={columns.length} className="px-4 py-8">
+                  <EmptyState
+                    compact
+                    icon={FolderSearch}
+                    title="No records found"
+                    description="Try a different tab or search term."
+                    className="border-slate-100"
+                  />
+                </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>
@@ -142,3 +174,31 @@ const columns: ColumnDef<RecordRow>[] = [
     )
   }
 ];
+
+function RecordCard({ record }: { record: RecordRow }) {
+  return (
+    <article className="rounded-2xl border border-slate-100 bg-white p-3 shadow-sm transition active:scale-[0.99]">
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div>
+          <span className="rounded-full bg-[#e8f1f8] px-2.5 py-1 text-xs font-semibold text-harbor">
+            {record.category}
+          </span>
+          <h3 className="mt-2 text-base font-semibold leading-snug">{record.title}</h3>
+        </div>
+        <span className="shrink-0 rounded-full bg-[#eef8f6] px-2.5 py-1 text-xs font-semibold text-teal-soft">
+          {record.status}
+        </span>
+      </div>
+      <div className="grid grid-cols-2 gap-2 text-sm">
+        <div className="rounded-xl bg-[#f8fafc] p-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Patient</p>
+          <p className="mt-0.5 font-medium text-slate-700">{record.patient}</p>
+        </div>
+        <div className="rounded-xl bg-[#f8fafc] p-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Date</p>
+          <p className="mt-0.5 font-medium text-slate-700">{record.date}</p>
+        </div>
+      </div>
+    </article>
+  );
+}
