@@ -24,6 +24,13 @@ HarborSync is a mobile-first family coordination and health/case documentation M
 4. Run `npm run prisma:migrate`.
 5. Start with `npm run dev`.
 
+For Resend magic links before a custom domain is verified, use:
+
+```env
+EMAIL_FROM="HarborSync <onboarding@resend.dev>"
+AUTH_RESEND_KEY="your-resend-api-key"
+```
+
 ## Product Boundaries
 
 V1 intentionally excludes billing, AI features, SMS, MyChart/FHIR/Apple Health integrations, advanced analytics, enterprise dashboards, and marketplace APIs.
