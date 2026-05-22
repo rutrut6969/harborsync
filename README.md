@@ -34,6 +34,13 @@ AUTH_TRUST_HOST="true"
 
 On Vercel, set both `AUTH_SECRET` and `NEXTAUTH_SECRET` to the same value for Auth.js compatibility.
 
+For Google sign-in, create a Google Auth Platform web client and set:
+
+```env
+AUTH_GOOGLE_ID="your-google-client-id"
+AUTH_GOOGLE_SECRET="your-google-client-secret"
+```
+
 ## Product Boundaries
 
 V1 intentionally excludes billing, AI features, SMS, MyChart/FHIR/Apple Health integrations, advanced analytics, enterprise dashboards, and marketplace APIs.
