@@ -13,7 +13,7 @@ async function main() {
   });
 
   const adminUsers = await Promise.all(
-    ["isaac.rutledgev@obsidian-systems.tech", "rutledgeisaac6969@gmail.com"].map((email) =>
+    ["isaac.rutledgev@obsidian-systems.tech"].map((email) =>
       prisma.user.upsert({
         where: { email },
         update: {
@@ -26,6 +26,17 @@ async function main() {
       })
     )
   );
+
+  await prisma.user.upsert({
+    where: { email: "rutledgeisaac6969@gmail.com" },
+    update: {
+      name: "Isaac Rutledge"
+    },
+    create: {
+      email: "rutledgeisaac6969@gmail.com",
+      name: "Isaac Rutledge"
+    }
+  });
 
   const family = await prisma.familyGroup.upsert({
     where: { id: "demo-family-parker" },
