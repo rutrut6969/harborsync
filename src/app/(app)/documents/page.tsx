@@ -7,7 +7,7 @@ import { Card, SectionHeader } from "@/components/ui/card";
 
 export default async function DocumentsPage() {
   const session = await auth();
-  const documents = await getDocuments(session?.user.id ?? "");
+  const documents = await getDocuments(session?.user?.id ?? "");
 
   return (
     <div className="space-y-5">

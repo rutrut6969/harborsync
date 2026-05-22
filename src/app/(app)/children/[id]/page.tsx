@@ -13,7 +13,7 @@ export default async function ChildPage({
 }) {
   const { id } = await params;
   const session = await auth();
-  const child = await getChildForUser(session?.user.id ?? "", id);
+  const child = await getChildForUser(session?.user?.id ?? "", id);
   if (!child) notFound();
   const emergencyContacts = parseEmergencyContacts(child.emergencyContacts);
 

@@ -4,7 +4,7 @@ import { getRecords } from "@/lib/data";
 
 export default async function RecordsPage() {
   const session = await auth();
-  const records = await getRecords(session?.user.id ?? "");
+  const records = await getRecords(session?.user?.id ?? "");
 
   return (
     <div className="space-y-5">

@@ -8,11 +8,13 @@ const resendApiKey = cleanEnv(process.env.AUTH_RESEND_KEY ?? process.env.RESEND_
 const emailFrom = cleanEnv(process.env.EMAIL_FROM) ?? "HarborSync <notifications@harborsync.app>";
 const googleClientId = cleanEnv(process.env.AUTH_GOOGLE_ID ?? process.env.GOOGLE_CLIENT_ID);
 const googleClientSecret = cleanEnv(process.env.AUTH_GOOGLE_SECRET ?? process.env.GOOGLE_CLIENT_SECRET);
+const authSecret = cleanEnv(process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET);
 
 export const isGoogleAuthEnabled = Boolean(googleClientId && googleClientSecret);
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
+  secret: authSecret,
   trustHost: true,
   session: {
     strategy: "database"

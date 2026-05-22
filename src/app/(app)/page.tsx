@@ -6,7 +6,7 @@ import { Card, SectionHeader } from "@/components/ui/card";
 
 export default async function HomePage() {
   const session = await auth();
-  const { activity, children, recentLogs, upcoming } = await getDashboardData(session?.user.id ?? "");
+  const { activity, children, recentLogs, upcoming } = await getDashboardData(session?.user?.id ?? "");
 
   return (
     <div className="space-y-5">

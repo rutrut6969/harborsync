@@ -32,6 +32,8 @@ AUTH_RESEND_KEY="your-resend-api-key"
 AUTH_TRUST_HOST="true"
 ```
 
+On Vercel, set both `AUTH_SECRET` and `NEXTAUTH_SECRET` to the same value for Auth.js compatibility.
+
 ## Product Boundaries
 
 V1 intentionally excludes billing, AI features, SMS, MyChart/FHIR/Apple Health integrations, advanced analytics, enterprise dashboards, and marketplace APIs.
