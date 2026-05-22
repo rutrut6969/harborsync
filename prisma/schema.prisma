@@ -84,28 +84,32 @@ enum AuditAction {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                  String    @id @default(cuid())
+  name                String?
+  email               String    @unique
+  emailVerified       DateTime?
+  image               String?
+  passwordHash        String?
+  passwordSetAt       DateTime?
+  resetTokenHash      String?
+  resetTokenExpiresAt DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
-  accounts              Account[]
-  sessions              Session[]
-  familyMemberships     FamilyMembership[]
+  accounts                Account[]
+  sessions                Session[]
+  familyMemberships       FamilyMembership[]
   organizationMemberships OrganizationMembership[]
-  caseParticipants      CaseParticipant[]
-  createdCases          Case[]                 @relation("CaseCreator")
-  medicationLogs        MedicationLog[]        @relation("MedicationAdmin")
-  doctorVisitLogs       DoctorVisitLog[]       @relation("DoctorVisitCreator")
-  bloodworkLogs         BloodworkLog[]         @relation("BloodworkCreator")
-  uploadedDocuments     Document[]             @relation("DocumentUploader")
-  auditLogs             AuditLog[]             @relation("AuditActor")
-  sentInvitations       Invitation[]           @relation("InvitationSender")
-  receivedInvitations   Invitation[]           @relation("InvitationRecipient")
-  childPermissions      ChildPermission[]
+  caseParticipants        CaseParticipant[]
+  createdCases            Case[]                   @relation("CaseCreator")
+  medicationLogs          MedicationLog[]          @relation("MedicationAdmin")
+  doctorVisitLogs         DoctorVisitLog[]         @relation("DoctorVisitCreator")
+  bloodworkLogs           BloodworkLog[]           @relation("BloodworkCreator")
+  uploadedDocuments       Document[]               @relation("DocumentUploader")
+  auditLogs               AuditLog[]               @relation("AuditActor")
+  sentInvitations         Invitation[]             @relation("InvitationSender")
+  receivedInvitations     Invitation[]             @relation("InvitationRecipient")
+  childPermissions        ChildPermission[]
 }
 
 model Account {
@@ -153,10 +157,10 @@ model Organization {
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 
-  memberships  OrganizationMembership[]
+  memberships    OrganizationMembership[]
   sponsoredCases Case[]
-  sponsorships FamilySponsorship[]
-  invitations  Invitation[]
+  sponsorships   FamilySponsorship[]
+  invitations    Invitation[]
 }
 
 model OrganizationMembership {
@@ -260,8 +264,8 @@ model Case {
   createdAt                DateTime   @default(now())
   updatedAt                DateTime   @updatedAt
 
-  createdBy              User          @relation("CaseCreator", fields: [createdById], references: [id])
-  sponsoringOrganization Organization? @relation(fields: [sponsoringOrganizationId], references: [id])
+  createdBy              User                @relation("CaseCreator", fields: [createdById], references: [id])
+  sponsoringOrganization Organization?       @relation(fields: [sponsoringOrganizationId], references: [id])
   children               CaseChild[]
   participants           CaseParticipant[]
   timeline               CaseTimelineEvent[]
@@ -310,22 +314,22 @@ model CaseTimelineEvent {
 }
 
 model MedicationLog {
-  id               String     @id @default(cuid())
-  childId          String
-  medicationName   String
-  dosage           Decimal
-  doseUnit         String
-  dateGiven        DateTime
-  timeGiven        String
-  administeredById String?
+  id                 String     @id @default(cuid())
+  childId            String
+  medicationName     String
+  dosage             Decimal
+  doseUnit           String
+  dateGiven          DateTime
+  timeGiven          String
+  administeredById   String?
   administeredByName String?
-  status           DoseStatus
-  notes            String?
-  sideEffects      String?
-  batchId          String?
-  entryMethod      String     @default("single")
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @updatedAt
+  status             DoseStatus
+  notes              String?
+  sideEffects        String?
+  batchId            String?
+  entryMethod        String     @default("single")
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
 
   child          ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)
   administeredBy User?        @relation("MedicationAdmin", fields: [administeredById], references: [id])
@@ -333,7 +337,7 @@ model MedicationLog {
 }
 
 model DoctorVisitLog {
-  id               String   @id @default(cuid())
+  id               String    @id @default(cuid())
   childId          String
   appointmentDate  DateTime
   appointmentTime  String?
@@ -341,11 +345,11 @@ model DoctorVisitLog {
   specialty        String?
   reasonForVisit   String
   diagnosisOutcome String?
-  followUpRequired Boolean  @default(false)
+  followUpRequired Boolean   @default(false)
   followUpDate     DateTime?
   createdById      String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   child     ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)
   createdBy User?        @relation("DoctorVisitCreator", fields: [createdById], references: [id])
@@ -353,20 +357,20 @@ model DoctorVisitLog {
 }
 
 model BloodworkLog {
-  id                   String   @id @default(cuid())
-  childId              String
-  bloodworkDate        DateTime
-  facility             String?
-  orderingDoctor       String?
-  labReason            String?
-  plateletCount        Decimal?
-  hemoglobin           Decimal?
-  whiteBloodCellCount  Decimal?
-  notes                String?
-  followUpRequired     Boolean  @default(false)
-  createdById          String?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  id                  String   @id @default(cuid())
+  childId             String
+  bloodworkDate       DateTime
+  facility            String?
+  orderingDoctor      String?
+  labReason           String?
+  plateletCount       Decimal?
+  hemoglobin          Decimal?
+  whiteBloodCellCount Decimal?
+  notes               String?
+  followUpRequired    Boolean  @default(false)
+  createdById         String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   child     ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)
   createdBy User?        @relation("BloodworkCreator", fields: [createdById], references: [id])
@@ -374,20 +378,20 @@ model BloodworkLog {
 }
 
 model Document {
-  id                String       @id @default(cuid())
-  title             String
-  type              DocumentType
-  fileUrl           String
-  fileKey           String
-  mimeType          String
-  sizeBytes         Int
-  uploadedById      String
-  childId           String?
-  caseId            String?
-  medicationLogId   String?
-  doctorVisitLogId  String?
-  bloodworkLogId    String?
-  createdAt         DateTime     @default(now())
+  id               String       @id @default(cuid())
+  title            String
+  type             DocumentType
+  fileUrl          String
+  fileKey          String
+  mimeType         String
+  sizeBytes        Int
+  uploadedById     String
+  childId          String?
+  caseId           String?
+  medicationLogId  String?
+  doctorVisitLogId String?
+  bloodworkLogId   String?
+  createdAt        DateTime     @default(now())
 
   uploadedBy     User            @relation("DocumentUploader", fields: [uploadedById], references: [id])
   child          ChildProfile?   @relation(fields: [childId], references: [id], onDelete: Cascade)

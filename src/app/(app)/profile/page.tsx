@@ -1,14 +1,23 @@
-import { Building2, LogOut, ShieldCheck, UsersRound } from "lucide-react";
+import { Building2, KeyRound, LogOut, ShieldCheck, UsersRound } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { getProfileData } from "@/lib/data";
 import { signOutUser } from "@/app/actions/session";
+import { changePassword } from "@/app/actions/password";
 import { Button } from "@/components/ui/button";
 import { Card, SectionHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 
-export default async function ProfilePage() {
+type ProfilePageProps = {
+  searchParams?: Promise<{
+    passwordError?: string;
+    passwordUpdated?: string;
+  }>;
+};
+
+export default async function ProfilePage({ searchParams }: ProfilePageProps) {
   const session = await auth();
   const profile = await getProfileData(session?.user?.id ?? "");
+  const params = await searchParams;
 
   return (
     <div className="space-y-5">
@@ -31,6 +40,75 @@ export default async function ProfilePage() {
             </Button>
           </form>
         </div>
+      </Card>
+
+      <Card>
+        <div className="flex items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#e8f1f8] text-harbor">
+            <KeyRound size={20} aria-hidden />
+          </div>
+          <div>
+            <SectionHeader title="Password Access" />
+            <p className="-mt-2 text-sm leading-6 text-slate-500">
+              Use a password for faster daily sign-ins. Magic links remain available as a recovery option.
+            </p>
+          </div>
+        </div>
+
+        {params?.passwordError ? (
+          <div className="mt-4 rounded-2xl border border-[#f1cdcd] bg-[#fff5f5] px-4 py-3 text-sm font-medium text-error-muted">
+            {params.passwordError}
+          </div>
+        ) : null}
+
+        {params?.passwordUpdated ? (
+          <div className="mt-4 rounded-2xl border border-[#cce7d5] bg-[#f2fbf5] px-4 py-3 text-sm font-medium text-[#4d8b63]">
+            Password updated.
+          </div>
+        ) : null}
+
+        <form action={changePassword} className="mt-5 grid gap-4 md:grid-cols-3">
+          <label className="space-y-2">
+            <span className="text-sm font-semibold text-slate-700">Current password</span>
+            <input
+              name="currentPassword"
+              type="password"
+              autoComplete="current-password"
+              className="min-h-11 w-full rounded-2xl border border-border bg-white px-4 text-sm outline-none transition focus:border-harbor focus:ring-4 focus:ring-[#3A6EA5]/10"
+              placeholder="Required if set"
+            />
+          </label>
+          <label className="space-y-2">
+            <span className="text-sm font-semibold text-slate-700">New password</span>
+            <input
+              name="password"
+              type="password"
+              autoComplete="new-password"
+              required
+              minLength={10}
+              className="min-h-11 w-full rounded-2xl border border-border bg-white px-4 text-sm outline-none transition focus:border-harbor focus:ring-4 focus:ring-[#3A6EA5]/10"
+              placeholder="10+ characters"
+            />
+          </label>
+          <label className="space-y-2">
+            <span className="text-sm font-semibold text-slate-700">Confirm password</span>
+            <input
+              name="confirmPassword"
+              type="password"
+              autoComplete="new-password"
+              required
+              minLength={10}
+              className="min-h-11 w-full rounded-2xl border border-border bg-white px-4 text-sm outline-none transition focus:border-harbor focus:ring-4 focus:ring-[#3A6EA5]/10"
+              placeholder="Repeat password"
+            />
+          </label>
+          <div className="md:col-span-3">
+            <Button type="submit" className="w-full sm:w-auto">
+              <KeyRound size={17} aria-hidden />
+              Update password
+            </Button>
+          </div>
+        </form>
       </Card>
 
       <Card>

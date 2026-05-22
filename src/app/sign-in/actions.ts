@@ -20,11 +20,10 @@ export async function requestMagicLink(formData: FormData) {
 }
 
 export async function signInWithGoogle() {
-  if (!isGoogleAuthEnabled) {
-    redirect("/sign-in?error=google-not-configured");
-  }
-
   try {
+    if (!isGoogleAuthEnabled) {
+      redirect("/sign-in?error=google-not-configured");
+    }
     await signIn("google", { redirectTo: "/" });
   } catch (error) {
     if (isRedirectError(error)) throw error;
