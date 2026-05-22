@@ -4,6 +4,13 @@ import Resend from "next-auth/providers/resend";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 
+const resendApiKey = cleanEnv(process.env.AUTH_RESEND_KEY ?? process.env.RESEND_API_KEY);
+const emailFrom = cleanEnv(process.env.EMAIL_FROM) ?? "HarborSync <notifications@harborsync.app>";
+const googleClientId = cleanEnv(process.env.AUTH_GOOGLE_ID ?? process.env.GOOGLE_CLIENT_ID);
+const googleClientSecret = cleanEnv(process.env.AUTH_GOOGLE_SECRET ?? process.env.GOOGLE_CLIENT_SECRET);
+
+export const isGoogleAuthEnabled = Boolean(googleClientId && googleClientSecret);
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   trustHost: true,
@@ -14,10 +21,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     signIn: "/sign-in"
   },
   providers: [
-    Google,
+    ...(isGoogleAuthEnabled
+      ? [
+          Google({
+            clientId: googleClientId,
+            clientSecret: googleClientSecret
+          })
+        ]
+      : []),
     Resend({
-      apiKey: process.env.AUTH_RESEND_KEY ?? process.env.RESEND_API_KEY,
-      from: process.env.EMAIL_FROM ?? "HarborSync <notifications@harborsync.app>"
+      apiKey: resendApiKey,
+      from: emailFrom
     })
   ],
   callbacks: {
@@ -35,3 +49,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }
   }
 });
+
+function cleanEnv(value?: string) {
+  const cleaned = value?.trim().replace(/^["']|["']$/g, "");
+  return cleaned || undefined;
+}

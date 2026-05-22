@@ -1,8 +1,15 @@
 import { Mail, ShieldCheck } from "lucide-react";
-import { signIn } from "@/lib/auth";
+import { isGoogleAuthEnabled } from "@/lib/auth";
+import { requestMagicLink, signInWithGoogle } from "@/app/sign-in/actions";
 import { Button } from "@/components/ui/button";
 
-export default function SignInPage() {
+export default async function SignInPage({
+  searchParams
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const params = await searchParams;
+
   return (
     <main className="grid min-h-screen place-items-center px-4 py-10">
       <section className="w-full max-w-md rounded-[1.75rem] border border-white bg-white p-6 calm-shadow">
@@ -17,15 +24,15 @@ export default function SignInPage() {
           </p>
         </div>
 
+        {params.error ? (
+          <div className="mb-4 rounded-2xl border border-[#efcdcd] bg-[#fff7f7] p-3 text-sm text-[#9d4f4f]">
+            {errorCopy[params.error] ?? errorCopy.email}
+          </div>
+        ) : null}
+
         <form
           className="space-y-3"
-          action={async (formData) => {
-            "use server";
-            await signIn("resend", {
-              email: String(formData.get("email") ?? ""),
-              redirectTo: "/"
-            });
-          }}
+          action={requestMagicLink}
         >
           <label className="block">
             <span className="mb-1.5 block text-sm font-medium text-slate-600">Email address</span>
@@ -44,17 +51,13 @@ export default function SignInPage() {
           </Button>
         </form>
 
-        <form
-          className="mt-3"
-          action={async () => {
-            "use server";
-            await signIn("google", { redirectTo: "/" });
-          }}
-        >
-          <Button className="w-full" type="submit" variant="secondary">
-            Continue with Google
-          </Button>
-        </form>
+        {isGoogleAuthEnabled ? (
+          <form className="mt-3" action={signInWithGoogle}>
+            <Button className="w-full" type="submit" variant="secondary">
+              Continue with Google
+            </Button>
+          </form>
+        ) : null}
 
         <div className="mt-6 flex gap-3 rounded-2xl bg-[#eef8f6] p-3 text-sm text-slate-600">
           <ShieldCheck className="shrink-0 text-teal-soft" size={20} aria-hidden />
@@ -64,3 +67,12 @@ export default function SignInPage() {
     </main>
   );
 }
+
+const errorCopy: Record<string, string> = {
+  email:
+    "We could not send the magic link. Check the email provider settings or try again in a moment.",
+  google:
+    "Google sign-in is not available right now. Try magic link sign-in instead.",
+  "google-not-configured":
+    "Google sign-in has not been configured for this deployment yet."
+};
